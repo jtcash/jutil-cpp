@@ -10,7 +10,7 @@
 
 
 
-
+// TODO: Remove braces with type_sv always
 
 
 
@@ -30,14 +30,14 @@ namespace jeff{
 
   namespace helper{ /// Avoid namespace pollution
     template<class... Ts>
-    constexpr std::string_view get_types_sv(){
+    inline constexpr std::string_view get_types_sv(){
       constexpr std::string_view pretty_func{__PRETTY_FUNCTION__};
       constexpr auto open_brace_pos = pretty_func.find('{'); // GCC wraps the types in braces
       return pretty_func.substr(open_brace_pos, pretty_func.rfind('}') - open_brace_pos + 1);
     }
 
     template<class... Ts>
-    constexpr std::string_view get_type_sv(){
+    inline constexpr std::string_view get_type_sv(){
       constexpr auto brace_wrapped = get_types_sv<Ts...>();
       if constexpr(sizeof...(Ts) == 1)  // Remove braces around type if there is exactly one
         return brace_wrapped.substr(1, brace_wrapped.size()-2); 
