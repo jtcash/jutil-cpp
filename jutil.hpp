@@ -12,8 +12,8 @@
 // https://godbolt.org/z/8D-AJb // IDK what this was, check when you feel like it
 
 
-#include "jinfo.hpp"  
-
+// #include "jinfo.hpp"  
+// #include "jout.hpp"
 
 
 // TODO: Categorize this
@@ -27,17 +27,14 @@ namespace jeff{
 
       constexpr skip_first_helper(T value, std::size_t n) : value{value}, n{n} {  }
 
-
-
-      // Overload specific to skip_first(a temporary range expession)
-      // T is not an rvalue reference type when this is called
-      // constexpr skip_first_helper(T&& value, std::size_t n, bool) : value{std::move(value)}, n{n} {  }
-
       constexpr decltype(auto) begin() const {
         decltype(auto) be = std::begin(value);
         size_t value_size( std::distance(be, std::end(value)) );
         return std::next( be, std::min(n, value_size) );
       }
+      // NOTE: Not sure if there is an idiomatic or proper way to get rid of annoying code 
+      // repetition issues like this
+
       constexpr decltype(auto) begin()  {
         decltype(auto) be = std::begin(value);
         size_t value_size( std::distance(be, std::end(value)) );

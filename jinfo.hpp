@@ -39,9 +39,11 @@ namespace jeff{
     template<class... Ts>
     inline constexpr std::string_view get_type_sv(){
       constexpr auto brace_wrapped = get_types_sv<Ts...>();
-      if constexpr(sizeof...(Ts) == 1)  // Remove braces around type if there is exactly one
-        return brace_wrapped.substr(1, brace_wrapped.size()-2); 
-      return brace_wrapped;  
+      //// Note, I have changed my mind and type_sv will always strip braces
+      return brace_wrapped.substr(1, brace_wrapped.size()-2); 
+      // if constexpr(sizeof...(Ts) == 1)  // Remove braces around type if there is exactly one
+        // return brace_wrapped.substr(1, brace_wrapped.size()-2); 
+      // return brace_wrapped;  
     }
   } // End namespace helper
 
