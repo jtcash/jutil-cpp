@@ -29,12 +29,26 @@
 namespace jeff{
 
   namespace helper{ /// Avoid namespace pollution
+
+  #ifdef _MSC_VER
+    template<class... Ts>
+    inline constexpr std::string_view get_types_sv(){
+      constexpr std::string_view pretty_func{__FUNCSIG__};
+    constexpr std::string_view func{__FUNCTION__};
+
+    constexpr auto withParenths = pretty_func.substr(pretty_func.find(func) + func.size());
+
+    constexpr std::string_view toTrim{"(void)"};
+    return withParenths.substr(0, withParenths.size() - toTrim.size());
+    }
+  #else
     template<class... Ts>
     inline constexpr std::string_view get_types_sv(){
       constexpr std::string_view pretty_func{__PRETTY_FUNCTION__};
       constexpr auto open_brace_pos = pretty_func.find('{'); // GCC wraps the types in braces
       return pretty_func.substr(open_brace_pos, pretty_func.rfind('}') - open_brace_pos + 1);
     }
+    #endif
 
     template<class... Ts>
     inline constexpr std::string_view get_type_sv(){
@@ -45,6 +59,7 @@ namespace jeff{
         // return brace_wrapped.substr(1, brace_wrapped.size()-2); 
       // return brace_wrapped;  
     }
+
   } // End namespace helper
 
   // Get a string_view representation of the passed type(s)
