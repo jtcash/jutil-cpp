@@ -1,3 +1,5 @@
+#pragma once
+
 #include <type_traits>
 
 
@@ -58,8 +60,16 @@ namespace jeff{
   struct is_same_any<T,U, Rest...> :
     or_type< std::is_same<T,U>, is_same_any<T, Rest...> >{};
 
-  template<class... Types>
-  inline constexpr bool is_same_any_v = is_same_any<Types...>::value;
+  template<class T, class... Types>
+  inline constexpr bool is_same_any_v = is_same_any<T, Types...>::value;
+
+
+  // A more intelligible alias for is_same_any
+  template<class T, class... Types>
+  struct is_one_of : is_same_any<T, Types...>{};
+  template<class T, class... Types>
+  inline constexpr bool is_one_of_v = is_one_of<T, Types...>::value;
+  
 
 
   /*** is_same_nocvref_any  ***/

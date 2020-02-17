@@ -29,7 +29,28 @@
 
 // move to jtype
 
+namespace jeff{
+  namespace helper{
+    // template<class T>
+    // struct quote_helper_t{
+    //   T&& t;
 
+    // };
+
+
+    template<class... Types>
+    struct wrap_t{
+      std::tuple<Types...> types;
+    };
+
+  }
+  template<class... Types>
+  helper::wrap_t<Types...> wrap(Types&&... types){
+    return {std::forward<Types>(types)...};
+  }
+  
+
+}
 
 namespace jeff{
   // For development purposes; marks types with no os_putter specialization
