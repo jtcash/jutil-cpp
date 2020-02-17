@@ -23,7 +23,8 @@ namespace jeff{
 
 
   class FileReader{
-    inline static constexpr bool enable_exceptions = true; // Hard vs soft error handling options
+    // Throw exceptions on errors, otherwise just write to cerr 
+    inline static constexpr bool enable_exceptions = true; 
 
   private:
     std::string filename; // The path of the file to be read in
@@ -32,15 +33,6 @@ namespace jeff{
   public:
 
     FileReader() : filename{}, file{} { }
-    
-    // FileReader(std::string filename) : 
-    //   filename{std::move(filename)}, 
-    //   file(filename, std::ios::in | std::ios::binary) {
-      
-    //   if(!file)
-    //     (void)error_message(false, "Failed to open");
-      
-    // }
 
     // JANK: Figure out a better way to integrate this
     FileReader(std::string filename, bool openOnConstruction) : filename{std::move(filename)}, file{} { 
@@ -48,6 +40,7 @@ namespace jeff{
         open();
     }
 
+    // Opens the file on construction by default
     FileReader(std::string filename) : FileReader(filename, true) {  }
 
     // FileReader is move constructible
@@ -55,11 +48,13 @@ namespace jeff{
       filename(std::move(that.filename)),
       file(std::move(that.file)) {  }
 
-    // File reader is move assignable. // TODO: Avoid using swap for quicker destruction
+    // File reader is move assignable. // TODO: what is best for members? move, swap?
     FileReader& operator=(FileReader&& that) noexcept{
       if(this != &that){
-        std::swap(filename, that.filename);
-        std::swap(file, that.file);
+        filename = std::move(that.filename);
+        file = std::move(that.file);
+        // std::swap(filename, that.filename);
+        // std::swap(file, that.file);
       }
       return *this;
     }
@@ -91,19 +86,21 @@ namespace jeff{
 
     // Read in a block of data, storing in dest. Return a string_view pointing to the fresh data
     template<std::size_t N>
-    std::string_view getBlock(std::array<std::ifstream::char_type,N>& dest){
-      if(!file)
-        return error_message(std::string_view(dest.data(), 0), "Attempting to read from a bad status file"); 
+    std::string_view getBlock(std::array<std::ifstream::char_type,N>& dest);
+    // template<std::size_t N>
+    // std::string_view getBlock(std::array<std::ifstream::char_type,N>& dest){
+    //   if(!file)
+    //     return error_message(std::string_view(dest.data(), 0), "Attempting to read from a bad status file"); 
 
-      file.read(dest.data(), N);
+    //   file.read(dest.data(), N);
 
-      // if(file.eof()) std::cerr << "NOTE: hit EOF after reading " << file.gcount() << " bytes" << std::endl;
-      auto charsRead = file.gcount();
-      if(charsRead < 0)
-        return error_message(std::string_view(dest.data(), 0), "No characters read, you should check EOF before calling");
+    //   // if(file.eof()) std::cerr << "NOTE: hit EOF after reading " << file.gcount() << " bytes" << std::endl;
+    //   auto charsRead = file.gcount();
+    //   if(charsRead < 0)
+    //     return error_message(std::string_view(dest.data(), 0), "No characters read, you should check EOF before calling");
 
-      return std::string_view(dest.data(), charsRead);
-    }
+    //   return std::string_view(dest.data(), charsRead);
+    // }
 
     decltype(auto) eof() const{ return file.eof(); }
     decltype(auto) tellg() { return file.tellg(); }
@@ -127,5 +124,23 @@ namespace jeff{
     }
   };
 
+
+
+
+
+  template<std::size_t N>
+  std::string_view FileReader::getBlock(std::array<std::ifstream::char_type,N>& dest){
+    if(!file)
+      return error_message(std::string_view(dest.data(), 0), "Attempting to read from a bad status file"); 
+
+    file.read(dest.data(), N);
+
+    // if(file.eof()) std::cerr << "NOTE: hit EOF after reading " << file.gcount() << " bytes" << std::endl;
+    auto charsRead = file.gcount();
+    if(charsRead < 0)
+      return error_message(std::string_view(dest.data(), 0), "No characters read, you should check EOF before calling");
+
+    return std::string_view(dest.data(), charsRead);
+  }
 
 } // end namespace jeff
