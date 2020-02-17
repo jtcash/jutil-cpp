@@ -75,7 +75,8 @@ namespace jeff{
   constexpr decltype(auto) argtype_sv(Ts&&... ts){ return type_sv<decltype(ts)...>; }
   
   // Get a string_view for the type of the expressions passed in as arguments
-  template<class... Ts> constexpr decltype(auto) argtypes_sv(Ts&&... ts){ return type_sv<decltype(ts)...>; }
+  template<class... Ts> 
+  constexpr decltype(auto) argtypes_sv(Ts&&... ts){ return types_sv<decltype(ts)...>; }
 
   // TODO: make sure I don't need to make these inline or static for use in multiple compilation units
 
