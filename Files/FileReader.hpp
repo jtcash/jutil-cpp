@@ -85,22 +85,22 @@ namespace jeff{
 
 
     // Read in a block of data, storing in dest. Return a string_view pointing to the fresh data
-    template<std::size_t N>
-    std::string_view getBlock(std::array<std::ifstream::char_type,N>& dest);
     // template<std::size_t N>
-    // std::string_view getBlock(std::array<std::ifstream::char_type,N>& dest){
-    //   if(!file)
-    //     return error_message(std::string_view(dest.data(), 0), "Attempting to read from a bad status file"); 
+    // std::string_view getBlock(std::array<std::ifstream::char_type,N>& dest);
+    template<std::size_t N>
+    std::string_view getBlock(std::array<std::ifstream::char_type,N>& dest){
+      if(!file)
+        return error_message(std::string_view(dest.data(), 0), "Attempting to read from a bad status file"); 
 
-    //   file.read(dest.data(), N);
+      file.read(dest.data(), N);
 
-    //   // if(file.eof()) std::cerr << "NOTE: hit EOF after reading " << file.gcount() << " bytes" << std::endl;
-    //   auto charsRead = file.gcount();
-    //   if(charsRead < 0)
-    //     return error_message(std::string_view(dest.data(), 0), "No characters read, you should check EOF before calling");
+      // if(file.eof()) std::cerr << "NOTE: hit EOF after reading " << file.gcount() << " bytes" << std::endl;
+      auto charsRead = file.gcount();
+      if(charsRead < 0)
+        return error_message(std::string_view(dest.data(), 0), "No characters read, you should check EOF before calling");
 
-    //   return std::string_view(dest.data(), charsRead);
-    // }
+      return std::string_view(dest.data(), charsRead);
+    }
 
     decltype(auto) eof() const{ return file.eof(); }
     decltype(auto) tellg() { return file.tellg(); }
@@ -128,19 +128,20 @@ namespace jeff{
 
 
 
-  template<std::size_t N>
-  std::string_view FileReader::getBlock(std::array<std::ifstream::char_type,N>& dest){
-    if(!file)
-      return error_message(std::string_view(dest.data(), 0), "Attempting to read from a bad status file"); 
+  // template<std::size_t N>
+  // std::string_view FileReader::getBlock(std::array<std::ifstream::char_type,N>& dest){
+  //   if(!file)
+  //     return error_message(std::string_view(dest.data(), 0), "Attempting to read from a bad status file"); 
 
-    file.read(dest.data(), N);
+  //   file.read(dest.data(), N);
 
-    // if(file.eof()) std::cerr << "NOTE: hit EOF after reading " << file.gcount() << " bytes" << std::endl;
-    auto charsRead = file.gcount();
-    if(charsRead < 0)
-      return error_message(std::string_view(dest.data(), 0), "No characters read, you should check EOF before calling");
+  //   // if(file.eof()) std::cerr << "NOTE: hit EOF after reading " << file.gcount() << " bytes" << std::endl;
+  //   auto charsRead = file.gcount();
+  //   if(charsRead < 0)
+  //     return error_message(std::string_view(dest.data(), 0), "No characters read, you should check EOF before calling");
 
-    return std::string_view(dest.data(), charsRead);
-  }
+  //   return std::string_view(dest.data(), charsRead);
+  // }
+  
 
 } // end namespace jeff
