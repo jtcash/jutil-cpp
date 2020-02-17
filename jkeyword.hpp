@@ -8,12 +8,16 @@
 // Specifies jkeyword and jkeyword_rt
 // TODO: Documentation
 
+// NOTE: Documentation for jeff::literals
+
 namespace jeff{
 
 
   
 
 
+  // jkeyword_rt is a runtime version of jkeyword, used for creating keywords from
+  // strings that are not compile-time constants
 
   class jkeyword_rt; // Forward declare for access to keyword's members in keyword_rt's constructors
   class jkeyword {
@@ -39,6 +43,11 @@ namespace jeff{
   //public:
     value_type hash;
     std::string_view sv;
+
+
+    // For use only by jkeyword_rt
+    constexpr jkeyword(value_type hash, std::string_view sv) noexcept : hash{hash}, sv{sv} { }
+
   public:
 
 
@@ -88,7 +97,10 @@ namespace jeff{
     friend constexpr bool operator< (jkeyword lhs, jkeyword rhs) noexcept { return lhs.hash <  rhs.hash; }
     friend constexpr bool operator> (jkeyword lhs, jkeyword rhs) noexcept { return lhs.hash >  rhs.hash; }
 
-    friend std::ostream& operator<<(std::ostream& os, const jkeyword& kw);
+    // friend std::ostream& operator<<(std::ostream& os, const jkeyword& kw);
+    friend std::ostream& operator<<(std::ostream& os, const jkeyword& kw){
+      return os << '[' << kw.hash << " : \"" << kw.sv << "\"]";
+    }
 
     // TODO: Figure out if and how to make a tuple of rvalue refs from a temporary keyword
 
@@ -98,11 +110,14 @@ namespace jeff{
 
   };
 
-
-  constexpr jkeyword operator "" _kw(const char* str, std::size_t len) noexcept {
-    return jkeyword{std::string_view{str, len}};
-    //using namespace std; // BUG IN MSVC! Thinks calling the sv converter is a declaration or something
-    //return keyword{std::operator"" sv(str, len)};
+  namespace literals{
+    constexpr jkeyword operator "" _kw(const char* str, std::size_t len) noexcept {
+      //constexpr jkeyword operator "" _jk(const char* str, std::size_t len) noexcept {
+      return jkeyword(std::string_view{str, len});
+      // return jkeyword{std::string_view{str, len}};
+      //using namespace std; // BUG IN MSVC! Thinks calling the sv converter is a declaration or something
+      //return keyword{std::operator"" sv(str, len)};
+    }
   }
 
 
@@ -139,9 +154,9 @@ namespace jeff{
     jkeyword_rt(const char * str) : jkeyword_rt(std::string(str)) {  }
 
 
-    jkeyword_rt(const jkeyword_rt& that) {
-      hash = that.hash;
-      sv = that.sv;
+    jkeyword_rt(const jkeyword_rt& that) : jkeyword(hash, sv) {
+      // hash = that.hash;
+      // sv = that.sv;
       str = that.str;
     }
     jkeyword_rt(jkeyword_rt&& that) noexcept {
@@ -185,15 +200,20 @@ namespace jeff{
     jkeyword_rt& operator=(jkeyword) = delete;
 
     // The most important bit, allow for implicit casting directly to a keyword 
-    constexpr operator jkeyword() const noexcept {
-      return static_cast<jkeyword>(*this);
-      //return *this;
-    }
+    // TODO: Will this implicitly cast?
+    // constexpr operator jkeyword() const noexcept {
+    //   return static_cast<jkeyword>(*this);
+    //   //return *this;
+    // }
 
 
     const std::string& value() const noexcept { return str; }
 
-    friend std::ostream& operator<<(std::ostream& os, const jkeyword_rt& kw);
+    // friend std::ostream& operator<<(std::ostream& os, const jkeyword_rt& kw);
+    // friend std::ostream& operator<<(std::ostream& os, const jkeyword_rt& kw){
+    //   return os << static_cast<jkeyword>(*this);
+    //   // return os << (operator jkeyword());
+    // }
 
   };
 
