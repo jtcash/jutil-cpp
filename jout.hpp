@@ -26,11 +26,6 @@
 
 
 
-// The main macros, TODO: move to jecho.hpp
-#define echo(...) jeff::os_putter(std::cout, #__VA_ARGS__, " = ", ( __VA_ARGS__ )) << std::endl 
-#define echot(...) jeff::os_putter(std::cout, #__VA_ARGS__, " = ", ( __VA_ARGS__ ), "; \t")
-
-
 
 // move to jtype
 
