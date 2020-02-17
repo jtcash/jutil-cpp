@@ -4,14 +4,36 @@
 #include <string_view>
 #include <string>
 #include <array>
+
 #include <iostream>
+
+#include <ios>
 #include <fstream>
 
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// This utility is used to facilitate reading files on a block-by-block level
-// Uses an ifstream opened for reading in binary
-///////////////////////////////////////////////////////////////////////////////////////////////////
+/***  jeff::FileReader
+ * 
+ * This utility is used to facilitate reading files on a block-by-block level.
+ * Uses an ifstream opened for reading in binary
+ * 
+ * This class is move constructible/assignable but not copy constuctible/assignable
+ * 
+ * Constructors: 
+ *  FileReader():
+ *      Default constructor, call default constructor for underlying fstream object
+ *  FileReader(string filename):
+ *      move-assign filename member, open specified file for reading in binary mode
+ * 
+ * Member functions:
+ *  open(string filename):
+ *      assigns filename member to filename arg, calls open()
+ *  open(): 
+ *      open the file specified by filename, can reopen files or open different files
+ *  eof(), tellg(), operator bool():
+ *      passed through from underlying fstream
+ *  getBlock(std::array<T,N>&):
+ *      reads a block of data from the file into the argument array
+*/
 
 
 
@@ -34,14 +56,10 @@ namespace jeff{
 
     FileReader() : filename{}, file{} { }
 
-    // JANK: Figure out a better way to integrate this
-    FileReader(std::string filename, bool openOnConstruction) : filename{std::move(filename)}, file{} { 
-      if(openOnConstruction)
-        open();
+    FileReader(std::string filename) : 
+      filename{std::move(filename)}, 
+      file(this->filename, std::ios::in | std::ios::binary) { 
     }
-
-    // Opens the file on construction by default
-    FileReader(std::string filename) : FileReader(filename, true) {  }
 
     // FileReader is move constructible
     FileReader(FileReader&& that) noexcept : 
