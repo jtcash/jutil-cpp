@@ -93,6 +93,15 @@ namespace jeff{
 
 
 
+  // A more intelligible alias for is_same_nocvref_any
+  template<class T, class... Types>
+  struct is_one_of_nocvref : is_same_nocvref_any<T, Types...>{};
+  template<class T, class... Types> 
+  inline constexpr bool is_one_of_nocvref_v = is_one_of_nocvref<T, Types...>::value;
+
+
+
+
   /*** is_array ***/
   template<class T>
   struct is_array : 
