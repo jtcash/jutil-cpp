@@ -6,6 +6,8 @@
 
 
 // Specifies jkeyword and jkeyword_rt
+// These can be used to have constexpr hashed strings, for use as keywords
+// The hashing method is Daniel J. Bernstein's djb2, for no particular reason
 // TODO: Documentation
 
 // NOTE: Documentation for jeff::literals
