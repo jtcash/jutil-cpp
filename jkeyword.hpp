@@ -3,7 +3,7 @@
 #include <string_view>
 #include <string>
 
-
+#include "jfunc.hpp" // for jeff::hash
 
 // Specifies jkeyword and jkeyword_rt
 // These can be used to have constexpr hashed strings, for use as keywords
@@ -35,12 +35,12 @@ namespace jeff{
 
   private:
     //// Uses the hash function djb2, by Daniel J. Bernstein
-    static constexpr value_type make_hash(const std::string_view& sv) {
-      value_type hash(5381);
-      for (auto&& c : sv)
-        hash = ((hash << 5) + hash) + c;
-      return hash;
-    }
+    // static constexpr value_type make_hash(const std::string_view& sv) {
+    //   value_type hash(5381);
+    //   for (auto&& c : sv)
+    //     hash = ((hash << 5) + hash) + c;
+    //   return hash;
+    // }
   protected:
   //public:
     value_type hash;
@@ -54,7 +54,7 @@ namespace jeff{
 
 
 
-    constexpr jkeyword(std::string_view sv) noexcept : hash{make_hash(sv)}, sv{sv} { }
+    constexpr jkeyword(std::string_view sv) noexcept : hash{jeff::make_hash(sv)}, sv{sv} { }
     constexpr jkeyword() noexcept : hash{}, sv{} { }
     //constexpr keyword(value_type hash) noexcept : hash{hash}, sv{""} { }
     constexpr jkeyword(const jkeyword& that) noexcept : hash{that.hash}, sv{that.sv} {}
@@ -67,7 +67,8 @@ namespace jeff{
     //keyword(const char *) = delete; // Interferes with char array reference
 
     constexpr jkeyword& operator=(std::string_view sv) noexcept {
-      hash = make_hash(sv);
+      // hash = make_hash(sv);
+      hash = jeff::make_hash(sv);
       this->sv = sv;
       return *this;
     }
