@@ -25,12 +25,19 @@
 // #include "jutil.hpp"
 
 
+// TODO: Documentation
+
+
+
+// NOTE: Also defines namespace jfmt
 
 
 
 namespace jeff{
   // For development purposes; marks types with no os_putter specialization
   inline constexpr bool indicate_unspecialized_os_putter = !true;
+
+
 
 
   // TODO: Renaming
@@ -49,22 +56,73 @@ namespace jeff{
   }// end namespace helper
 
   template<class Func>
-  constexpr decltype(auto) carry_lambda(Func f){
+  constexpr decltype(auto) carry_lambda(Func f) noexcept{
     return helper::lambda_carrier_t<Func>{f};
   }
 
 
+  // // temp, jank solution and example of carry_lambda
+  // template<class T>
+  // constexpr decltype(auto) hex(T t){
+  //   return carry_lambda([t](auto& os) -> decltype(os){
+  //     return os << reinterpret_cast<void*>(t);
+  //   });
+  // } // moved to jfmt namespace
+
+
+
+} // end namespace jeff
+
+
+namespace jfmt{
+  using namespace jeff;
+  
   // temp, jank solution and example of carry_lambda
   template<class T>
-  constexpr decltype(auto) hex(T t){
+  constexpr decltype(auto) x(T t) noexcept{ // by value, as this should only take scalars and is temporary anyway
     return carry_lambda([t](auto& os) -> decltype(os){
       return os << reinterpret_cast<void*>(t);
     });
   }
 
 
+  // q formatter for quoting allows specifying the quote character used
 
-} // end namespace jeff
+
+  namespace helper{
+    template<class FrontT, class BackT, class T>
+    constexpr decltype(auto) q(FrontT front, BackT back, const T& t ) noexcept { // NOTE: const lval ref for capture reason
+      return carry_lambda([=, &t](auto& os) -> decltype(os){
+        return os << front << t << back;
+      });
+    }
+  } // end namespace helper
+
+  template<char Front, char Back, class T>
+  constexpr decltype(auto) q(const T& t) noexcept{
+    return helper::q(Front, Back, t);
+  }
+  template<char Wrapper, class T>
+  constexpr decltype(auto) q(const T& t) noexcept{
+    return q<Wrapper, Wrapper>(t);
+  }
+  template<class T>
+  constexpr decltype(auto) q(const T& t) noexcept{
+    return q<'"'>(t);
+  }
+  
+
+} // end namespace jfmt
+
+
+
+
+
+
+
+
+
+
 
 // Os overloading
 
