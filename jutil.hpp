@@ -5,7 +5,8 @@
  *  jutil is expected to rely heavily on C++17 features, and targets GCC, though MSVC support is
  * expected for most features.
  *  Everything, except for the occasional macro definition when unavoidable, is contained in
- * the `jeff` namespace.
+ * the `jeff` namespace or the `jfmt` namespace for ostream put formatters like jfmt::x for "as hex"
+ * jfmt::q for "quoted"... etc.
  **/
 
 
