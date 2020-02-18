@@ -1,10 +1,16 @@
 #pragma once
 
-#include <string_view>
 #include <cstdint>
 #include <cstddef> // std::byte
 
+#include <string_view>
+
+
 #include <type_traits>
+
+#include <tuple>
+
+#include "jtype.hpp"
 /**
  *  A set of tools related to <functional> as well as a general functional programming paradigm
  * 
@@ -17,10 +23,103 @@ namespace jeff{
 
   namespace helper{
     // uint32_t 
+
+    
+
+   
+
+
+    // NOTE: I played around with different specialization methods
+    // template<class T, auto...>
+    // struct xorshifter_t;
+
+    // template<auto ParamA, auto ParamB, auto ParamC>
+    // struct xorshifter_t<std::uint32_t, ParamA, ParamB, ParamC> {
+    //   using value_type = std::uint32_t;
+    //   static constexpr value_type step(value_type x) noexcept{
+    //     x ^= x << ParamA;
+    //     x ^= x >> ParamB;
+    //     x ^= x << ParamC;
+    //     return x;
+    //   }
+    // };
+    
+    // // Default shift parameters
+    // template<> struct xorshifter_t<std::uint32_t> : xorshifter_t<std::uint32_t, 13, 17, 5> { };
+
+    // template<auto ParamA, auto ParamB, auto ParamC>
+    // struct xorshifter_t<std::uint64_t, ParamA, ParamB, ParamC> {
+    //   using value_type = std::uint64_t;
+    //   static constexpr value_type step(value_type x) noexcept{
+    //     x ^= x << ParamA;
+    //     x ^= x >> ParamB;
+    //     x ^= x << ParamC;
+    //     return x;
+    //   }
+    // };
+    
+    // Default shift parameters
+    // template<> struct xorshifter_t<std::uint64_t> : xorshifter_t<std::uint64_t, 13, 7, 17> { };
+
+     namespace detail{
+      // CREDIT: xorshift algorithm from https://doi.org/10.18637%2Fjss.v008.i14
+      template<class T, auto ParamA, auto ParamB, auto ParamC>
+      struct xorshifter_t{
+        using value_type = T;
+
+        [[nodiscard]] static constexpr decltype(auto) parameters() noexcept{
+          return std::make_tuple(ParamA, ParamB, ParamC);
+        }
+
+        [[nodiscard]] static constexpr value_type step(value_type x) noexcept{
+          x ^= x << ParamA;
+          x ^= x >> ParamB;
+          x ^= x << ParamC;
+          return x;
+        }
+      };
+    } // end namespace detail
+
+    // Primary template
+    template<class T, auto...> struct xorshifter_t;
+    
+    // Specializations for uint32_t and uint64_t
+    template<auto A, auto B, auto C>
+    struct xorshifter_t<std::uint32_t, A, B, C> : detail::xorshifter_t<std::uint32_t, A, B, C> { };
+
+    template<auto A, auto B, auto C>
+    struct xorshifter_t<std::uint64_t, A, B, C> : detail::xorshifter_t<std::uint64_t, A, B, C> { };
+
+
+    // Default parameters
+    template<> struct xorshifter_t<std::uint32_t> : xorshifter_t<std::uint32_t, 13,17,5>{};
+    template<> struct xorshifter_t<std::uint64_t> : xorshifter_t<std::uint64_t, 13,7,17>{};
+
+    // template<class T, auto... Params>
+    // using xorshifter_resolver = xorshifter_t<jeff::remove_cvref_t<T>, Params...>;
+
+    template<class T, auto... Params>
+    struct xorshifter_resolver : xorshifter_t<
+      std::make_unsigned_t<
+        jeff::remove_cvref_t<T>
+      >,
+      Params...
+    > { };
   }// end namespace helper
 
 
+  // The two overloads for xorshfit:
+  // One works by reference, the other works by value, which explains the return types
+  template<class T>
+  constexpr void xorshift(T& t){
+    t = helper::xorshifter_resolver<T>::step(t);
+  }
+  template<class T> [[nodiscard]] 
+  constexpr T xorshift(const T& t){
+    return helper::xorshifter_resolver<T>::step(t);
+  }
 
+  
 /**
  *  jeff::hash will be like std::hash, but the hashed result type is not necessary std::size_t
  * 
@@ -83,28 +182,35 @@ namespace jeff{
     // }
 
     // TODO: Noexcept evaluation. What if they have bad ranges or something?
-    constexpr string_hash_type make_hash(std::string_view sv) {
+    constexpr string_hash_type make_hash(std::string_view sv) noexcept {
       string_hash_type hash{string_hash_initial};
       for (auto c : sv)
         hash = string_hash_step(hash, c);
       return hash;
     }
-    template<class T, std::size_t N>
+    // NOTE: This also covers std:string, as it has implicit operator string_view()
+    
+    // NOTE: perhaps use proper basic types instead of specializations
+    //  e.g. use template<class charT, class traits> std::basic_string_view<charT, traits>
+    //  instead of std::string_view  
+  
+
+    template<std::size_t N>
     constexpr string_hash_type make_hash(const char (&arr)[N]) {
       return make_hash(std::string_view{arr, N-1}); // WARNING! This assumes the last character is '\0'
     }
+
+    // NOTE: I went overboard testing assembly generation https://godbolt.org/z/iWUdZM
+    //  This seems to be good for both msvc, gcc and clang
     constexpr string_hash_type make_hash(const char* str) {
-      // Note: This traverses the string twice: once to get length, once to calculate hash.
-      // Maybe it would be better to just do while != '\0' loop
-      // return make_hash(std::string_view(str));
-      if(str){ // Consult https://godbolt.org/z/EPFn7t for performance differences with msvc
+      if(str){
         string_hash_type hash{string_hash_initial};
-        while(*str != '\0')
-          hash = string_hash_step(hash, *str++);
+        for(char c=*str; c!='\0'; c=*++str)
+          hash = string_hash_step(hash, c);          // hash = hash*33 + c;
+        return hash;
       }
       return 0;
     }
-
 
   } // end namespace helper
 
