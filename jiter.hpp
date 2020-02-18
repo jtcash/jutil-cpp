@@ -97,3 +97,27 @@ namespace jeff{
   // TODO: Figure out if I should have the rvalue reference specialization constructor
 
 }// end namespace jeff
+
+
+
+
+
+/**   PLANS AND TODOS
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ */
+
+
+
+//// NOTE: I believe this contained something that was destined for jutil
+// https://godbolt.org/z/8D-AJb // I checked on this, and it seems like it
+// was just me playing around with methods for doing a zip-like operation
+// and zipping vectors together. Reference this if you ever want to know
+// how not to start making an iterable type that joins two or more containers.
