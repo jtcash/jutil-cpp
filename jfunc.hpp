@@ -7,7 +7,6 @@
 
 
 #include <type_traits>
-
 #include <tuple>
 
 #include "jtype.hpp"
@@ -119,7 +118,7 @@ namespace jeff{
     return helper::xorshifter_resolver<T>::step(t);
   }
 
-  
+
 /**
  *  jeff::hash will be like std::hash, but the hashed result type is not necessary std::size_t
  * 
@@ -175,12 +174,6 @@ namespace jeff{
     }
 
 
-
-
-    // [[nodiscard]] constexpr string_hash_type string_hash_step(string_hash_type hash, std::int8_t c) noexcept{
-    //   return string_hash_step(hash, static_cast<std::uint8_t>(c));
-    // }
-
     // TODO: Noexcept evaluation. What if they have bad ranges or something?
     constexpr string_hash_type make_hash(std::string_view sv) noexcept {
       string_hash_type hash{string_hash_initial};
@@ -218,11 +211,22 @@ namespace jeff{
   template<class...>
   struct hash;
 
-
-  template<>
-  struct hash<std::string_view>{
-
+  template<class T>
+  struct hash<T> {
+    constexpr decltype(auto) operator()(const T& t) noexcept(noexcept(helper::make_hash(t))){
+      return helper::make_hash(t);
+    }
   };
+
+  template<class T>
+  constexpr decltype(auto) make_hash(T&& t) noexcept(noexcept(helper::make_hash(std::forward<T>(t)))){ // lol, unnecessary?
+    return helper::make_hash(std::forward<T>(t));
+  } 
+  // constexpr decltype(auto) make_hash(const T& t) noexcept(noexcept(helper::))
+  // template<>
+  // struct hash<std::string_view>{
+
+  // };
 
 
 } // End namespace jeff
