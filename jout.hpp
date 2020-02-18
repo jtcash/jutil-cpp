@@ -33,6 +33,36 @@ namespace jeff{
   inline constexpr bool indicate_unspecialized_os_putter = !true;
 
 
+  // TODO: Renaming
+  // Goal to have something like https://en.cppreference.com/w/cpp/io/manip/endl
+  // but flexible. This is just an alternative to using std::function or somethign
+  namespace helper{
+    template<class Func>
+    struct lambda_carrier_t{
+      const Func f;
+      //std::basic_ostream<CharT, Traits>& endl( std::basic_ostream<CharT, Traits>& os );
+      template<class Os>
+      friend Os& operator<<(Os& os, const lambda_carrier_t& lc){
+        return lc.f(os);
+      }
+    };
+  }// end namespace helper
+
+  template<class Func>
+  constexpr decltype(auto) carry_lambda(Func f){
+    return helper::lambda_carrier_t<Func>{f};
+  }
+
+
+  // temp, jank solution and example of carry_lambda
+  template<class T>
+  constexpr decltype(auto) hex(T t){
+    return carry_lambda([t](auto& os) -> decltype(os){
+      return os << reinterpret_cast<void*>(t);
+    });
+  }
+
+
 
 } // end namespace jeff
 
@@ -57,6 +87,26 @@ namespace jeff{
   constexpr std::array<char, 3> byte_to_hex(std::byte b){
     return { nibble_to_hex(b>>4), nibble_to_hex(b), '\0'};
   }
+
+// template< class CharT, class Traits >
+// std::basic_ostream<CharT, Traits>& endl( std::basic_ostream<CharT, Traits>& os );
+	namespace helper{
+    constexpr decltype(auto) byte_to_hex_for_os(std::byte b){
+      return carry_lambda([b](auto& os) -> decltype(os){
+        return os << nibble_to_hex(b>>4) << nibble_to_hex(b);
+        // return os << "pls" << std::to_integer<uint32_t>(b);
+      });
+    }
+  }
+  template<class T, std::enable_if_t<sizeof(T)==1, int> = 0>
+  constexpr decltype(auto) os_put_hex(T t){
+    return helper::byte_to_hex_for_os(std::byte{t});
+  }
+  
+  // template<class... OsTypes, std::size_t N>
+  // static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, std::byte){
+
+  // }
 }
 
 // NOTE: String literals pass-through os_putter
@@ -114,6 +164,10 @@ namespace jeff{
     constexpr decltype(auto) os_putter(Os&& os, bool b){
       return std::forward<Os>(os) << (b ? "true" : "false");
     }
+    // template<class Os>
+    // constexpr decltype(auto) os_putter(Os&& os, bool b){
+    //   return std::forward<Os>(os) << (b ? "true" : "false");
+    // }
 
     template<class Os>
     constexpr decltype(auto) os_putter(Os&& os, const char* str){
@@ -189,6 +243,15 @@ namespace jeff{
       return std::forward<Os>(os) << "'\\x" << tmp.data() << '\'';
     }
 
+
+
+    // // Why does sd::ostream reinterpret unsigned char* to char* for put operator???
+    // template<class Os>
+    // constexpr decltype(auto) os_putter(Os&& os, const std::uint8_t* bp){
+    //   // return 
+    //   // auto tmp = jeff::byte_to_hex(b);
+    //   return std::forward<Os>(os) << (const void*)bp;
+    // }
 
   }
 
@@ -291,6 +354,43 @@ static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>
 
 
 
+template<class... OsTypes, std::size_t N>
+static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, std::array<uint8_t, N> const& arr){
+  os << "{ ";
+  for(auto&& e : arr)
+    os << jeff::os_put_hex(e) << ' ';
+
+  return os << '}';
+  // int ctr{};
+  // for(auto&& e : vec)
+    // os << (ctr++ == 0 ? "{ ": ", ") << e;
+  // return os << (ctr==0 ? "{ }" : " }");
+}
+
+// template<class... OsTypes, std::size_t N>
+// static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const std::uint8_t* bp){
+//   return os << (void*)(bp);
+// }
+
+template<class... OsTypes>
+static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const unsigned char* bp){
+  return os << (const void*)(bp);
+}
+
+template<class... OsTypes>
+static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, unsigned char* bp){
+  return os << (void*)(bp);
+}
 
 
 
+//TODO: I don't know why this overload catches but the above doesn't. Perhaps there is some issue to do
+// with the above being less specific due to type pack, try using exact format of ostream
+/*
+inline basic_ostream<char, _Traits> &
+    operator<<(basic_ostream<char, _Traits>& ___out, const unsigned char* __s)
+    { return (___out << reinterpret_cast<const char*>(__s)); }
+*/
+inline std::ostream& operator<<(std::ostream& os, const unsigned char* bp){
+  return os << (void*)(bp);
+}
