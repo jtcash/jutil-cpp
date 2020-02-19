@@ -36,12 +36,12 @@ namespace jeff{
 
 
 
-#ifdef JECHO_HELPER
-#error JECHO_HELPER is already defined. `jecho.hpp` requires JECHO_HELPER to be undefined
-#else
-#define JECHO_HELPER(os, label, args) jeff::os_putter(os << label << " = ", args)
-#endif
-
+// #ifdef JECHO_HELPER
+// #error JECHO_HELPER is already defined. `jecho.hpp` requires JECHO_HELPER to be undefined
+// #else
+// #define JECHO_HELPER(os, label, args) jeff::os_putter(os << label << " = ", args)
+// #endif
+// Can't use JECHO_HELPER with variadic macro, i think
 
 
 // Make sure the definitions are available
@@ -51,20 +51,25 @@ namespace jeff{
 #endif
 
 #ifndef jecho
-#define jecho(...)  (  JECHO_HELPER(std::cout, #__VA_ARGS__, (__VA_ARGS__)) << std::endl  )
+#define jecho(...)  (jeff::os_putter(std::cout << #__VA_ARGS__ << " = ", __VA_ARGS__) << std::endl)
+// #define jecho(...)  (  JECHO_HELPER(std::cout, #__VA_ARGS__, (__VA_ARGS__)) << std::endl  )
 #endif
 
 #ifndef jechot
-#define jechot(...) (  JECHO_HELPER(std::cout, #__VA_ARGS__, (__VA_ARGS__)) << "; \t"  )
+#define jechot(...)  (jeff::os_putter(std::cout << #__VA_ARGS__ << " = ", __VA_ARGS__) << "; \t")
+// #define jechot(...) (  JECHO_HELPER(std::cout, #__VA_ARGS__, (__VA_ARGS__)) << "; \t"  )
 #endif
 
-#ifndef jlecho
-#define jlecho(...)  (  JECHO_HELPER(std::cout << , #__VA_ARGS__, (__VA_ARGS__)) << std::endl  )
-#endif
 
-#ifndef jlechot
-#define jlechot(...) (  JECHO_HELPER(std::cout, #__VA_ARGS__, (__VA_ARGS__)) << "; \t"  )
-#endif
+
+// // NOTE: L versions are not done
+// #ifndef jlecho
+// #define jlecho(...)  (  JECHO_HELPER(std::cout << , #__VA_ARGS__, (__VA_ARGS__)) << std::endl  )
+// #endif
+
+// #ifndef jlechot
+// #define jlechot(...) (  JECHO_HELPER(std::cout, #__VA_ARGS__, (__VA_ARGS__)) << "; \t"  )
+// #endif
 
 
 
