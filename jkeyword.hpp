@@ -3,7 +3,19 @@
 #include <string_view>
 #include <string>
 
+#include <ostream>
+
 #include "jfunc.hpp" // for jeff::hash
+
+
+
+#include <vector> // temp for debug
+#include "jecho.hpp" // temp for debug
+#include "jutil.hpp" // temp for debug
+#ifndef __FUNCSIG__
+#define __FUNCSIG__ __PRETTY_FUNCTION__
+#endif
+
 
 // Specifies jkeyword and jkeyword_rt
 // These can be used to have constexpr hashed strings, for use as keywords
@@ -12,6 +24,15 @@
 
 // NOTE: Documentation for jeff::literals
 
+//template<typename... Types>
+// inline std::ostream& operator<<(std::ostream& os, std::vector<Types...> const& vec){
+//   int ctr{};
+//   for(auto&& e : vec)
+//     os << (ctr++ == 0 ? "{ ": ", ") << e;
+//   return os << (ctr==0 ? "{ }" : " }");
+// }
+ //template<class T>
+ //void printVecWTF(const std
 namespace jeff{
 
 
@@ -49,7 +70,7 @@ namespace jeff{
 
     // For use only by jkeyword_rt
     constexpr jkeyword(value_type hash, std::string_view sv) noexcept : hash{hash}, sv{sv} { }
-
+    constexpr jkeyword(value_type hash) noexcept : hash{hash}, sv{} { }
   public:
 
 
@@ -140,6 +161,20 @@ namespace jeff{
   class jkeyword_rt : public jkeyword {
   protected:
     std::string str;
+
+
+    //static constexpr bool error_tracking = false;
+    //
+    //std::vector<std::string> history;
+    ////std::conditional_t<error_tracking, std::vector<std::string>, std::false_type> history;
+    ////std::vector<std::string> history;
+    //template<class T = void>
+    //std::enable_if_t<error_tracking, T>
+    //hist(std::string msg) {
+    //  if constexpr (error_tracking) {
+    //    history.emplace_back(msg);
+    //  }
+    //}
   public:
 
     jkeyword_rt(const std::string& str) {
@@ -147,26 +182,55 @@ namespace jeff{
       jkeyword&& tmp{static_cast<std::string_view>(this->str)};
       hash = std::move(tmp.hash);
       sv = std::move(tmp.sv);
+      //if constexpr (error_tracking) { check(__FUNCSIG__); hist(__FUNCSIG__); }
     }
     jkeyword_rt(std::string&& str) {
       this->str = std::move(str);
       jkeyword&& tmp{static_cast<std::string_view>(this->str)};
       hash = std::move(tmp.hash);
       sv = std::move(tmp.sv);
+      //if constexpr (error_tracking) { check(__FUNCSIG__); hist(__FUNCSIG__); }
     }
-    jkeyword_rt(const char * str) : jkeyword_rt(std::string(str)) {  }
+    jkeyword_rt(const char * str) : jkeyword_rt(std::string(str)) {
+      //if constexpr (error_tracking) { check(__FUNCSIG__); hist(__FUNCSIG__); }
+    }
 
 
-    jkeyword_rt(const jkeyword_rt& that) : jkeyword(hash, sv) {
+    //jkeyword_rt(const jkeyword_rt& that) : jkeyword(hash, sv) {
+    jkeyword_rt(const jkeyword_rt& that) : jkeyword{that.hash} {
+      str = that.str;
+      sv = std::string_view(str);
+
+      //if constexpr (error_tracking) { check(__FUNCSIG__); hist(__FUNCSIG__); }
+    }
+    jkeyword_rt(jkeyword_rt&& that) : jkeyword{std::move(that.hash)} {
       // hash = that.hash;
       // sv = that.sv;
-      str = that.str;
-    }
-    jkeyword_rt(jkeyword_rt&& that) noexcept {
-      hash = std::move(that.hash);
-      sv = std::move(that.sv);
+      //str = that.str;
+      //hash = std::move(that.hash);
       str = std::move(that.str);
+      sv = std::string_view(str);
+
+      //if constexpr (error_tracking) { check(__FUNCSIG__); hist(__FUNCSIG__); }
     }
+    ////jkeyword_rt(jkeyword_rt&& that) noexcept = default;
+    //jkeyword_rt(jkeyword_rt&& that) noexcept :
+    //  jkeyword{std::move(that.hash), std::move(that.sv)},
+    //  str{std::move(that.str)}   {
+    //  
+    //  check(__FUNCSIG__);
+    //  hist(__FUNCSIG__);
+    //}
+    // {
+    //   hash = std::move(that.hash);
+    //   sv = std::move(that.sv);
+    //   str = std::move(that.str);
+    // }
+    // jkeyword_rt(jkeyword_rt&& that) noexcept {
+    //   hash = std::move(that.hash);
+    //   sv = std::move(that.sv);
+    //   str = std::move(that.str);
+    // }
 
     jkeyword_rt(const jkeyword&) = delete;
     jkeyword_rt(jkeyword&&) = delete;
@@ -175,12 +239,16 @@ namespace jeff{
       hash = that.hash;
       sv = that.sv;
       str = that.str;
+      //if constexpr (error_tracking) { check(__FUNCSIG__); hist(__FUNCSIG__); }
       return *this;
     }
     jkeyword_rt& operator=(jkeyword_rt&& that) noexcept {
-      hash = std::move(that.hash);
-      sv = std::move(that.sv);
-      str = std::move(that.str);
+      if(this != &that){
+        hash = std::move(that.hash);
+        sv = std::move(that.sv);
+        str = std::move(that.str);
+      }
+      //if constexpr (error_tracking) { check(__FUNCSIG__); hist(__FUNCSIG__); }
       return *this;
     }
 
@@ -189,6 +257,7 @@ namespace jeff{
       jkeyword&& tmp{static_cast<std::string_view>(this->str)};
       hash = std::move(tmp.hash);
       sv = std::move(tmp.sv);
+      //if constexpr (error_tracking) { check(__FUNCSIG__); hist(__FUNCSIG__); }
       return *this;
     }
     jkeyword_rt& operator=(std::string&& str) noexcept {
@@ -196,6 +265,7 @@ namespace jeff{
       jkeyword&& tmp{static_cast<std::string_view>(this->str)};
       hash = std::move(tmp.hash);
       sv = std::move(tmp.sv);
+      //if constexpr (error_tracking) { check(__FUNCSIG__); hist(__FUNCSIG__); }
       return *this;
     }
 
@@ -218,6 +288,46 @@ namespace jeff{
     //   // return os << (operator jkeyword());
     // }
 
+    friend std::ostream& operator<<(std::ostream& os, const jkeyword_rt& kw){
+      //if constexpr(jkeyword_rt::error_tracking)          kw.check();
+      return os << '[' << kw.hash << " : \"" << kw.value() << "\"]";
+    }
+
+
+    ////void check(std::string_view loc = "") const {
+    //void check(std::string loc = "") const{
+    //  if constexpr (error_tracking) {
+    //    static std::vector<std::string_view> locs;
+
+    //    if (sv.data() != str.data()) {
+    //      jecho(loc);
+    //      std::cerr << "DATA MISMATCH" << std::endl;
+    //      jecho(jfmt::l(history));
+    //      //std::cerr << "\t" << locs.size() << std::endl;
+    //      jecho(locs);
+
+    //      throw "cunt";
+    //    }
+    //    if (sv.size() != str.size()) {
+    //      jecho(loc);
+
+    //      std::cerr << "SIZE MISMATCH" << std::endl;
+    //      jecho(jfmt::l(history));
+    //      //std::cerr << "\t" << locs << std::endl;
+    //      jecho(locs);
+    //      throw "m8 u srs?";
+    //    }
+
+    //    locs.emplace_back(loc);
+    //  }
+    //}
+
   };
+
+
+  // inline void check(const jkeyword_rt& kw){
+  //   //kw.check();
+  // }
+
 
 } // end namespace jeff
