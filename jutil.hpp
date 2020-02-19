@@ -6,6 +6,7 @@
  * expected for most features.
  *  Everything, except for the occasional macro definition when unavoidable, is contained in
  * the `jeff` namespace or the `jfmt` namespace for ostream put formatters like jfmt::x for "as hex"
+ * the `jos` namespace for std::ostream put operator overloads, for MSVC compatibility
  * jfmt::q for "quoted"... etc.
  **/
 
