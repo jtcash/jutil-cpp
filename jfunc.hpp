@@ -133,8 +133,9 @@ namespace jeff{
     t = helper::xorshifter_resolver<T>::step(t);
   }
   template<class T> [[nodiscard]] 
+  // constexpr T xorshift(T&& t){
   constexpr T xorshift(const T& t){
-    return helper::xorshifter_resolver<T>::step(t);
+    return helper::xorshifter_resolver<T>::step(std::move(t));
   }
 
 

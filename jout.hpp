@@ -103,6 +103,8 @@ namespace jeff{
  *  
  *  t:  Thousands separator: for integral types, print the integer with thousands separators. TODO: floating types
  * 
+ *  pl: Pad left  TODO: details
+ *  pr: pad right TODO: details
  * 
  * */
 namespace jfmt{
@@ -144,9 +146,10 @@ namespace jfmt{
     return q<'"'>(t);
   }
   
-  // LIST
+  
 
-  /*** l ***/
+  /*** l ***/ // LIST
+
   template<class T>
   constexpr decltype(auto) l(const T& t) noexcept { // NOTE: const lval ref for capture reason
     return carry_lambda([=, &t](auto& os) -> decltype(os){
@@ -159,10 +162,7 @@ namespace jfmt{
 
 
 
-  /*** t ***/
-
-
-
+  /*** t ***/ // Thousands separator
   namespace helper{
     namespace detail{
       template<class T> // No type check needed, as this is only called by put_thousands
@@ -193,6 +193,35 @@ namespace jfmt{
       return helper::put_thousands(os, t);
     });
   }
+
+
+
+
+  // pad method can be improved
+  namespace helper{
+    std::ostream& put_pad(std::ostream& os, std::size_t npad, char padc){
+      return os << std::string(npad, padc);
+    }
+  }// end helper
+
+  /*** pl ***/ // pad the left
+
+  template<class T>
+  constexpr decltype(auto) pl(const T& t, std::size_t npad, char padc = ' ') noexcept{ // by value, as this should only take scalars and is temporary anyway
+    return carry_lambda([=, &t](auto& os) -> decltype(os){
+      return helper::put_pad(os, npad, padc) << t;
+    });
+  }
+  
+  /*** pr ***/ // pad the right
+  
+  template<class T>
+  constexpr decltype(auto) pr(const T& t, std::size_t npad, char padc = ' ') noexcept{ // by value, as this should only take scalars and is temporary anyway
+    return carry_lambda([=, &t](auto& os) -> decltype(os){
+      return helper::put_pad(os << t, npad, padc);
+    });
+  }
+
 } // end namespace jfmt
 
 // Allow resolution of jfmt::helper::put_thousands in jeff
