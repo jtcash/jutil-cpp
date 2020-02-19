@@ -9,6 +9,8 @@
 #include <type_traits>
 #include <tuple>
 
+#include <optional>
+
 #include "jtype.hpp"
 /**
  *  A set of tools related to <functional> as well as a general functional programming paradigm
@@ -17,6 +19,23 @@
  *    * hash: like std::hash
  * 
  **/
+
+
+
+namespace jos{
+
+
+  template<class... OsTypes, class T>
+  static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const std::optional<T>& ot) {
+    if(ot.has_value())
+      return os << '`' << ot.value() << '`';
+    return os << "`{}`";
+  }
+
+}// end jos
+
+
+
 
 namespace jeff{
 
