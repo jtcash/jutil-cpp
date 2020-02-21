@@ -7,8 +7,13 @@
 
 namespace jeff{
   /*** remove_cvref ***/
+  template<class...>
+  struct remove_cvref{};
+
+
+
   template<class T> 
-  struct remove_cvref :
+  struct remove_cvref<T> :
      std::remove_cv< std::remove_reference_t<T> >{};
   
   template<class T>
@@ -109,4 +114,15 @@ namespace jeff{
 
   template< class T >
   inline constexpr bool is_array_v = is_array<T>::value;
+
+
+
+
+
+  // TESTING: Basically same as std::common_type_t, but but no use of decay?
+  template<class... Types>
+  using common_type_nocvref_t = std::common_type_t<jeff::remove_cvref_t<Types>...>;
+
+
+
 }

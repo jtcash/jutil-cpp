@@ -105,6 +105,8 @@ namespace jeff{
  * 
  *  pl: Pad left  TODO: details
  *  pr: pad right TODO: details
+ *  
+ *  g: Group into something like "(a,b,c)""
  * 
  * */
 namespace jfmt{
@@ -219,6 +221,42 @@ namespace jfmt{
   constexpr decltype(auto) pr(const T& t, std::size_t npad, char padc = ' ') noexcept{ // by value, as this should only take scalars and is temporary anyway
     return carry_lambda([=, &t](auto& os) -> decltype(os){
       return helper::put_pad(os << t, npad, padc);
+    });
+  }
+
+
+
+  namespace helper{
+    template<class... Types>
+    std::ostream& put_group(std::ostream& os, Types&&... types){ // should do const lvalue instead?
+      std::size_t n{};
+      os << '(';
+
+      ( ( (n++ ? os << "," : os) << types   ), ...);
+
+
+      return os << ')';
+    }
+  }// end helper
+
+
+/*
+
+  std::apply(
+    [&os](Types const&... tupleArgs){
+        os << "[ ";
+        std::size_t n{0};
+        (  (os << tupleArgs << (++n != sizeof...(Types) ? ", " : " ]")), ...  );
+    }, 
+    theTuple
+  );
+  return os;
+  */
+
+  template<class... Types>
+  constexpr decltype(auto) g(const Types&... types) noexcept{ // by value, as this should only take scalars and is temporary anyway
+    return carry_lambda([&types...](auto& os) -> decltype(os){
+      return helper::put_group(os, types...);
     });
   }
 

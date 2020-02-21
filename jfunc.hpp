@@ -10,6 +10,7 @@
 #include <tuple>
 
 #include <optional>
+#include <random>
 
 #include "jtype.hpp"
 /**
@@ -33,6 +34,82 @@ namespace jos{
   }
 
 }// end jos
+
+
+
+
+
+
+/** GENERATORS */
+
+
+
+namespace jeff{
+  namespace detail{
+
+    // One random device for all generators
+    struct randgen_base{
+      static std::mt19937 gen;
+    };
+    std::mt19937 randgen_base::gen(std::random_device{}()); 
+
+    template<class T>
+    using resolve_dist_type_t = std::conditional_t<
+      std::is_floating_point_v<T>,
+      std::uniform_real_distribution<T>,
+      std::uniform_int_distribution<T>
+    >;
+
+    template<class T, class dist_type = resolve_dist_type_t<T>>
+    struct randgen_t : detail::randgen_base, public dist_type{
+      using dist_type::dist_type;
+      using typename dist_type::result_type;
+
+      static_assert(std::is_arithmetic_v<result_type>);
+
+      result_type operator()() noexcept{
+        return dist_type::operator()(gen);
+      }
+    };
+
+  } // end detail
+
+  // Make a generator functor that produces random values in range [t, u]
+  // the generator inherits from uniform_{int,real}_distribution depending on the type
+  template<class T, class U>
+  inline auto randgen(T a, U b){
+    return detail::randgen_t<std::common_type_t<T,U>>(a, b);
+  }
+  // See randgen(a,b) for details, same thing but b is decided by the distribution type 
+  template<class T>
+  inline auto randgen(T t){
+    return detail::randgen_t<std::common_type_t<T>>(t); // common_type is used to decay T
+  }
+
+
+
+  /** a simple generator for seqs */
+namespace detail{
+  template<class T>
+  struct rangen_t{
+    T curr;
+    const T step;
+    T operator()() noexcept{
+      return std::exchange(curr, curr + step);
+    }
+  };
+}// end detail
+template<class T, class U = T>
+constexpr auto rangen(T start, U step = T(1)) noexcept{
+  return detail::rangen_t<std::common_type_t<T,U>>{start, step};
+}
+constexpr auto rangen() noexcept{
+  return rangen(0);
+}
+
+
+
+} // end jeff
 
 
 
