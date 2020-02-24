@@ -41,6 +41,8 @@
 // FileReader abstracts away chunked reads from a file or stream
 
 
+
+
 namespace jeff{
 
 
@@ -51,48 +53,39 @@ namespace jeff{
     virtual ~TokenizerBase() = default;
     virtual std::string_view getToken(std::string_view delimiters) = 0;
     virtual inline std::string_view getToken(){ return getToken(default_delims); }
+
+    //virtual bool skip_until(std::string_view until_chars) = 0;// impl no worky
+      
     
     template<class... Args>
     inline jeff::jkeyword getKeyword(Args&&... args){
       return {getToken(std::forward<Args>(args)...)};
     }
 
-    template<class AsType>
-    [[nodiscard]]
+    template<class AsType> [[nodiscard]]
     std::enable_if_t<is_one_of_v<AsType, int, float, double, long double>, 
     std::optional<AsType> > getTokenAs(){
       auto tok = getToken();
-      return jeff::chars_to<AsType>(tok); // return jeff::chars_to_fast<AsType>(tok);
+      return jeff::chars_to<AsType>(tok);
     }
-
+    template<class AsType> [[nodiscard]]
+    std::enable_if_t<is_one_of_v<AsType, int, float, double, long double>, 
+    std::optional<AsType> > getTokenAsExperimental(){
+      auto tok = getToken();
+      return jeff::chars_to<AsType, true>(tok);
+    }
 
     template<class... AsTypes>
-    [[nodiscard]]
-    std::optional<std::tuple<AsTypes...>> getTokensAs(){
-      
-
-      try{
-        return std::make_optional(std::make_tuple(*getTokenAs<AsTypes>()...));
-      } catch(const std::bad_optional_access&) {
-        return std::nullopt;
-      }
-
-      // auto tok = getToken();
-
-      // std::tuple<std::optional<AsType>, std::optional<Types>...> tup
-
-      // return jeff::chars_to<AsType>(tok); // return jeff::chars_to_fast<AsType>(tok);
+    [[nodiscard]] auto getTokensAs(){
+      return jeff::merge_optionals(getTokenAs<AsTypes>()...);
     }
-    // // template<class AsType, class... Args>
-    // [[nodiscard]]
-    // std::enable_if_t<is_one_of_v<AsType, int, float, double, long double>, 
-    // std::optional<AsType> > getTokenAs(Args&&... args){
-    //   auto tok = getToken(std::forward<Args>(args)...);
-    //   return jeff::chars_to<AsType>(tok); // return jeff::chars_to_fast<AsType>(tok);
-    // }
 
     std::string_view operator()() { return getToken(); }
     virtual explicit operator bool() const = 0;
+
+
+
+    static inline constexpr std::string_view no_token{};
   };
 
 
@@ -118,11 +111,13 @@ namespace jeff{
     source_type _source;                                  // The source used to populate buffers
 
     Tokenizer(source_type_naked& src, std::string_view delimiters = default_delims) : 
-      buf_sv{}, 
+      buffers{},
+      buf_sv{},
       delimiter_sv{delimiters}, 
       _source(src) {  }
 
     Tokenizer(source_type_naked&& src, std::string_view delimiters = default_delims) :
+      buffers{},
       buf_sv{}, 
       delimiter_sv{delimiters}, 
       _source(std::move(src)) {  }
@@ -135,6 +130,16 @@ namespace jeff{
     [[nodiscard]]
     std::string_view getToken() override{ return getToken(delimiter_sv); }
 
+
+
+
+
+
+    /// THE MAIN BEEFY BOI ///
+
+
+    
+
     // TODO: Variable token delims
     [[nodiscard]]
     std::string_view getToken(std::string_view delimiters) override{
@@ -146,7 +151,8 @@ namespace jeff{
       // Find where a token starts
       auto tbegin_loc = buf_sv.find_first_not_of(delimiters);
       if(tbegin_loc == std::string_view::npos)
-        return handleNoOpenDelimFound(delimiters);  // Could not find the start of a token
+        return handleNoOpenDelimFound2() ? getToken(delimiters) : no_token;
+        // return handleNoOpenDelimFound(delimiters);  // Could not find the start of a token
       
       // Find where this token ends
       auto tend_loc = buf_sv.find_first_of(delimiters, tbegin_loc+1);
@@ -156,8 +162,28 @@ namespace jeff{
       // Extract the token and update the buffer pointer to exclude this token
       auto token = buf_sv.substr(tbegin_loc, tend_loc - tbegin_loc);
       buf_sv.remove_prefix(tbegin_loc + token.size() + 1); // +1 because it removes the delim?? Test if i am right
+
       return token;
     }
+
+
+    // NO WORKY
+    //// TODO: Merge commonalities of getToken and this into helper
+    //bool skip_until(std::string_view until_chars){
+    //   if(buf_sv.empty() && !refillBuffer()){  // Check on empty buffer
+    //    buf_sv = {};  // Failed to refill buffer, so just return empty
+    //    return false;
+    //  }
+    //   // Find where a token starts
+    //  auto tbegin_loc = buf_sv.find_first_of(until_chars);
+    //  jecho("WHY");
+    //  if(tbegin_loc == std::string_view::npos)
+    //    return handleNoOpenDelimFound2() ? skip_until(until_chars) : false;
+    //  jecho("WHY NOT");
+    //  return true;
+    //}
+
+
 
 
 
@@ -272,16 +298,35 @@ namespace jeff{
     }
 
     // Helpers for getToken
+
+    // This was replaced to make a more useful and generic version without losing
+    // any clarity
+    // [[nodiscard]]
+    // std::string_view handleNoOpenDelimFound(std::string_view delimiters){
+    //   std::cerr << "ERROR: No token character found" << std::endl;
+    //   if(refillBuffer())
+    //     return getToken(delimiters);
+    //   // This could mean that we have reached the end of the file
+    //   std::cerr << "refillBufferAfterCopy() failed loc1" << std::endl;
+    //   buf_sv = {};
+    //   return {};
+    // }
+    
+
     [[nodiscard]]
-    std::string_view handleNoOpenDelimFound(std::string_view delimiters){
-      std::cerr << "ERROR: No token character found" << std::endl;
+    bool handleNoOpenDelimFound2(){
+      // std::cerr << "ERROR: No token character found" << std::endl;
+      // If this is called, most likely means no more tokens exist in the file
+
       if(refillBuffer())
-        return getToken(delimiters);
+        return true;
       // This could mean that we have reached the end of the file
-      std::cerr << "refillBufferAfterCopy() failed loc1" << std::endl;
+      std::cerr << "refillBufferAfterCopy2() failed loc1" << std::endl;
       buf_sv = {};
-      return {};
+      return false;
     }
+    
+
     [[nodiscard]]
     std::string_view handleNoCloseDelimFound(std::string_view delimiters){
       if(!operator bool()){ // TODO: I think I can remove this
@@ -297,6 +342,43 @@ namespace jeff{
       // so just return what is currently in buf_sv and clear it;
       return std::exchange(buf_sv, {});
     }
+
+
+    //[[nodiscard]]
+    //bool handleNoOpenDelimFound2(std::string_view delimiters) {
+    //  std::cerr << "ERROR: No token character found" << std::endl;
+    //  if (refillBuffer())
+    //    return getToken(delimiters);
+    //  // This could mean that we have reached the end of the file
+    //  std::cerr << "refillBufferAfterCopy() failed loc1" << std::endl;
+    //  buf_sv = {};
+    //  return {};
+    //}
+
+    //bool skip_until(std::string_view until_chars) override {
+    //  if (buf_sv.empty() && !refillBuffer()) {  // Check on empty buffer
+    //    buf_sv = {};  // Failed to refill buffer, so just return empty
+    //    return false;
+    //  }
+
+    //  // Find where a token starts
+    //  auto tbegin_loc = buf_sv.find_first_of(until_chars);
+    //  if (tbegin_loc == std::string_view::npos) {
+    //    return handleNoOpenDelimFound(delimiters);  // Could not find the start of a token
+    //  }
+
+
+    //  // Extract the token and update the buffer pointer to exclude this token
+    //  auto token = buf_sv.substr(tbegin_loc, tend_loc - tbegin_loc);
+    //  buf_sv.remove_prefix(tbegin_loc + token.size() + 1); // +1 because it removes the delim?? Test if i am right
+
+    //  return token;
+    //}
+
+
+
+
+
 
 
     // Helper to check if the buffer pointer is pointing within a buffer
@@ -336,13 +418,21 @@ namespace jeff{
     return Tokenizer<Source, BlockSize>(std::forward<Source>(source));
   }
 
-  template<std::size_t BlockSize = 4096>   // TODO: Error handling
+  // template<std::size_t BlockSize = 4096>   // TODO: Error handling
+  // inline Tokenizer<FileReader, BlockSize> makeFileTokenizer(std::string filename){
+  //   return makeTokenizer<BlockSize>(FileReader(std::move(filename)));
+  // }
+  
+  template<std::size_t BlockSize>   // TODO: Error handling
   inline Tokenizer<FileReader, BlockSize> makeFileTokenizer(std::string filename){
     return makeTokenizer<BlockSize>(FileReader(std::move(filename)));
   }
+  inline auto makeFileTokenizer(std::string filename){
+    return makeFileTokenizer<4096>(filename);
+    // return makeTokenizer<4096>(FileReader(std::move(filename)));
+  }
 
-
-
+  
 
   using TokenizerPointer = std::shared_ptr<TokenizerBase>;
   template<std::size_t BlockSize = 4096>   // TODO: Error handling
@@ -358,16 +448,17 @@ namespace jeff{
     return makeFileTokenizer<BlockSize>(filename).getAllTokens(delimiters);
   }
 
+
+
+
+
+
+
+
+
+
+
    
-  constexpr bool is_word(std::string_view sv) {
-    for (auto c : sv)
-      //if (!(std::isalnum(c) || c == '_'))
-        return false;
-    return true;
-  }
-
-
-
 
 } // end namespace jeff
 

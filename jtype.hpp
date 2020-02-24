@@ -20,7 +20,7 @@ namespace jeff{
   }
 
   constexpr bool is_alpha(char c){
-    return is_lower(c) || is_alpha(c);
+    return is_lower(c) || is_upper(c);
   }
   constexpr bool is_alnum(char c){
     return is_digit(c) || is_alpha(c);

@@ -680,7 +680,18 @@ inline std::ostream& operator<<(std::ostream& os, const unsigned char* bp){
   inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const std::pair<T,U>& p) {
     return os << '(' << p.first << ',' << p.second << ')';
   }
+template<class... OsTypes>
+inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, bool b) {
+  return os << (b ? "true" : "false");
+}
+// // template<class... OsTypes>
+// // inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, bool b) {
+// //   return os <<( b ? "true" : "false");
+// // }
 
+// // inline std::ostream& operator<<(std::ostream& os, bool b) {
+// //   return os << b ? "true" : "false";
+// // }
 // } // end namespace jos
 
 
@@ -725,12 +736,16 @@ namespace jeff {
   //}
 
   template<class Os, class T>
-  decltype(auto) os_putter(Os&& os, T&& t) {
+  inline decltype(auto) os_putter(Os&& os, T&& t) {
     using ::operator<<; // holy shit fuck msvc 
     // CREDIT: https://stackoverflow.com/a/32822359/6232717
     return std::forward<Os>(os) << std::forward<T>(t);
   }
-
+  template<class Os>
+  inline decltype(auto) os_putter(Os&& os, bool b) {
+    using ::operator<<; // holy shit fuck msvc 
+    return std::forward<Os>(os) << (b ? "true" : "false");
+  }
 
 
   //template<class Os, class T, class U, class... Rest>

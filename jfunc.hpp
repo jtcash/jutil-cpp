@@ -232,8 +232,15 @@ namespace jeff{
   }
 
   #ifdef _MSC_VER
-  template<class T, std::enable_if_t<std::is_floating_point_v<T> || std::is_integral_v<T>, int> = 0>
+  // template<class T, std::enable_if_t<std::is_floating_point_v<T> || std::is_integral_v<T>, int> = 0>
+  template<class T, bool experimental = false, std::enable_if_t<std::is_floating_point_v<T> || std::is_integral_v<T>, int> = 0>
   [[nodiscard]] std::optional<T> chars_to(std::string_view sv){
+    if constexpr(experimental)
+      if constexpr(std::is_integral_v<T>)
+        return chars_to_fast<T>(sv);
+      
+    
+      
     T result;
     if(auto [p, ec] = std::from_chars(sv.data(), sv.data()+sv.size(), result); ec == std::errc())
       return result;
@@ -242,9 +249,11 @@ namespace jeff{
 
   #else
   // template<class T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
-  template<class T, std::enable_if_t<jeff::is_one_of_v<T, float, double, long double>, int> = 0>
+  // template<class T, std::enable_if_t<jeff::is_one_of_v<T, float, double, long double>, int> = 0>
+  template<class T, bool experimental = false, std::enable_if_t<jeff::is_one_of_v<T, float, double, long double>, int> = 0>
   [[nodiscard]] std::optional<T> chars_to(std::string_view sv){
-
+    if constexpr(experimental)
+      return chars_to_fast<T>(sv);
     if(sv.empty())
       return std::nullopt;
     const char * const str = sv.data();
@@ -272,6 +281,11 @@ namespace jeff{
 
     return std::make_optional(result);
   }
+
+  // template<class T, bool fast , std::enable_if_t<jeff::is_one_of_v<T, float, double, long double>, int> = 0>
+  // [[nodiscard]] std::optional<T> chars_to(std::string_view sv){
+
+  // }
   #endif
 
 
