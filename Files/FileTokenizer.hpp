@@ -313,11 +313,11 @@ namespace jeff{
     // }
     
 
+    // clear the buffer pointer and return false the buffer cannot be refilled
     [[nodiscard]]
     bool handleNoOpenDelimFound2(){
       // std::cerr << "ERROR: No token character found" << std::endl;
       // If this is called, most likely means no more tokens exist in the file
-
       if(refillBuffer())
         return true;
       // This could mean that we have reached the end of the file
@@ -326,7 +326,7 @@ namespace jeff{
       return false;
     }
     
-
+    
     [[nodiscard]]
     std::string_view handleNoCloseDelimFound(std::string_view delimiters){
       if(!operator bool()){ // TODO: I think I can remove this
@@ -342,41 +342,6 @@ namespace jeff{
       // so just return what is currently in buf_sv and clear it;
       return std::exchange(buf_sv, {});
     }
-
-
-    //[[nodiscard]]
-    //bool handleNoOpenDelimFound2(std::string_view delimiters) {
-    //  std::cerr << "ERROR: No token character found" << std::endl;
-    //  if (refillBuffer())
-    //    return getToken(delimiters);
-    //  // This could mean that we have reached the end of the file
-    //  std::cerr << "refillBufferAfterCopy() failed loc1" << std::endl;
-    //  buf_sv = {};
-    //  return {};
-    //}
-
-    //bool skip_until(std::string_view until_chars) override {
-    //  if (buf_sv.empty() && !refillBuffer()) {  // Check on empty buffer
-    //    buf_sv = {};  // Failed to refill buffer, so just return empty
-    //    return false;
-    //  }
-
-    //  // Find where a token starts
-    //  auto tbegin_loc = buf_sv.find_first_of(until_chars);
-    //  if (tbegin_loc == std::string_view::npos) {
-    //    return handleNoOpenDelimFound(delimiters);  // Could not find the start of a token
-    //  }
-
-
-    //  // Extract the token and update the buffer pointer to exclude this token
-    //  auto token = buf_sv.substr(tbegin_loc, tend_loc - tbegin_loc);
-    //  buf_sv.remove_prefix(tbegin_loc + token.size() + 1); // +1 because it removes the delim?? Test if i am right
-
-    //  return token;
-    //}
-
-
-
 
 
 
