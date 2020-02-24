@@ -15,7 +15,7 @@
 
 #include <charconv> // for temp
 
-
+#include <tuple>
 
 
 
@@ -31,6 +31,23 @@
 
 #include <cmath> // for HUGE_VAL
 
+
+
+
+
+// some optional manipulation
+namespace jeff{
+
+  template<class... Types>
+  [[nodiscard]] constexpr std::optional<std::tuple<Types...>> merge_optionals(std::optional<Types>... opts){
+    if( ( ... && opts) )
+      return std::make_optional(std::make_tuple((*opts)...));
+    return std::nullopt;
+
+  }
+
+
+}// end jeff
 
 
 namespace jeff{
