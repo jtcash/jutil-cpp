@@ -4,6 +4,45 @@
 
 
 
+// TODO: Relocate this maybe
+#include <string_view>
+
+
+namespace jeff{
+  constexpr bool is_lower(char c){
+    return c >= 'a' && c <= 'z';
+  }
+  constexpr bool is_upper(char c){
+    return c >= 'A' && c <= 'Z';
+  }
+  constexpr bool is_digit(char c){
+    return c >= '0' && c <= '9';
+  }
+
+  constexpr bool is_alpha(char c){
+    return is_lower(c) || is_alpha(c);
+  }
+  constexpr bool is_alnum(char c){
+    return is_digit(c) || is_alpha(c);
+  }
+  constexpr bool is_name(char c){
+    return is_alnum(c) || c == '_';
+  }
+
+
+  constexpr bool is_name(std::string_view sv){
+    for(auto c : sv)
+      if(!is_name(c))
+        return false;
+    return true;
+  }
+
+  
+
+
+}// end jeff
+
+
 
 namespace jeff{
   /*** remove_cvref ***/

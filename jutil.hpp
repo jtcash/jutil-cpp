@@ -11,7 +11,6 @@
  **/
 
 
-
 #include "jinfo.hpp"  
 #include "jecho.hpp"
 #include "jfunc.hpp"

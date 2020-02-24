@@ -203,7 +203,7 @@ namespace jeff{
 
       //if constexpr (error_tracking) { check(__FUNCSIG__); hist(__FUNCSIG__); }
     }
-    jkeyword_rt(jkeyword_rt&& that) : jkeyword{std::move(that.hash)} {
+    jkeyword_rt(jkeyword_rt&& that) noexcept  : jkeyword{std::move(that.hash)}  {
       // hash = that.hash;
       // sv = that.sv;
       //str = that.str;
@@ -323,6 +323,20 @@ namespace jeff{
     //}
 
   };
+
+
+
+
+  constexpr jkeyword make_keyword(std::string_view sv){
+    return {sv};
+  }
+  template<std::size_t N>
+  constexpr jkeyword make_keyword(const char (&str)[N]){
+    return make_keyword(std::string_view(str, N-1));
+  }
+  inline jkeyword_rt make_keyword(std::string str){
+    return {str};
+  }
 
 
   // inline void check(const jkeyword_rt& kw){

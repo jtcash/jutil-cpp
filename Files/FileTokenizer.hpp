@@ -1,6 +1,5 @@
 #pragma once
 
-#include "FileReader.hpp" 
 
 
 
@@ -24,9 +23,18 @@
 
 #include <cstdlib>
 
+#include <memory> // shared_ptr
+
+
+#include "FileReader.hpp" 
+
+
 #include "../jutil.hpp"
 #include "../jout.hpp"
 #include "../jtype.hpp"
+
+
+#include "../jkeyword.hpp"
 
 
 
@@ -43,13 +51,52 @@ namespace jeff{
     virtual ~TokenizerBase() = default;
     virtual std::string_view getToken(std::string_view delimiters) = 0;
     virtual inline std::string_view getToken(){ return getToken(default_delims); }
+    
+    template<class... Args>
+    inline jeff::jkeyword getKeyword(Args&&... args){
+      return {getToken(std::forward<Args>(args)...)};
+    }
+
+    template<class AsType>
+    [[nodiscard]]
+    std::enable_if_t<is_one_of_v<AsType, int, float, double, long double>, 
+    std::optional<AsType> > getTokenAs(){
+      auto tok = getToken();
+      return jeff::chars_to<AsType>(tok); // return jeff::chars_to_fast<AsType>(tok);
+    }
+
+
+    template<class... AsTypes>
+    [[nodiscard]]
+    std::optional<std::tuple<AsTypes...>> getTokensAs(){
+      
+
+      try{
+        return std::make_optional(std::make_tuple(*getTokenAs<AsTypes>()...));
+      } catch(const std::bad_optional_access&) {
+        return std::nullopt;
+      }
+
+      // auto tok = getToken();
+
+      // std::tuple<std::optional<AsType>, std::optional<Types>...> tup
+
+      // return jeff::chars_to<AsType>(tok); // return jeff::chars_to_fast<AsType>(tok);
+    }
+    // // template<class AsType, class... Args>
+    // [[nodiscard]]
+    // std::enable_if_t<is_one_of_v<AsType, int, float, double, long double>, 
+    // std::optional<AsType> > getTokenAs(Args&&... args){
+    //   auto tok = getToken(std::forward<Args>(args)...);
+    //   return jeff::chars_to<AsType>(tok); // return jeff::chars_to_fast<AsType>(tok);
+    // }
 
     std::string_view operator()() { return getToken(); }
     virtual explicit operator bool() const = 0;
   };
 
 
-  template<class T, std::size_t BlockSize = 16>
+  template<class T, std::size_t BlockSize = 4096>
   struct Tokenizer : public TokenizerBase{
     using source_type = T; // Requires string_view getBlock(buf), operator bool()
     static constexpr std::size_t buffer_size = BlockSize;
@@ -148,33 +195,46 @@ namespace jeff{
 
 
 
+    // template<class... Args>
+    // [[nodiscard]]
+    // jkeyword getKeyword(Args&&... args){
+    //   return {getToken(std::forward<Args>(args)...)};
+    // }
 
-
-  #ifdef _MSC_VER  
-    template<class AsType, class... Args>
-    std::enable_if_t<is_one_of_v<AsType, int, float, double, long double>, 
-    std::optional<AsType> > getToken(Args&&... args){
-      auto tok = getToken(std::forward<Args>(args)...);
-
-      AsType value;
-      // auto [p, ec] = std::from_chars(tok.data(), tok.data()+tok.size(), value);
-      auto result = std::from_chars(tok.data(), tok.data()+tok.size(), value);
-      if(result.ec == std::errc{})
-        return std::nullopt;
-      return std::make_optional(value);
-    }
-  #else
     // template<class AsType, class... Args>
-    // std::optional<AsType> getToken(Args&&... args){
-    template<class AsType, class... Args>
-    std::enable_if_t<is_one_of_v<AsType, int, float, double, long double>, 
-    std::optional<AsType> > getToken(Args&&... args){
-      auto tok = getToken(std::forward<Args>(args)...);
-      if(tok.empty())
-        return std::make_optional(static_cast<AsType>(-42)); // TODO: Safe fallback for when from_chars DNE
-      return std::nullopt;
-    }
-  #endif
+    // [[nodiscard]]
+    // std::enable_if_t<is_one_of_v<AsType, int, float, double, long double>, 
+    // std::optional<AsType> > getToken(Args&&... args){
+    //   auto tok = getToken(std::forward<Args>(args)...);
+    //   return jeff::chars_to_fast<AsType>(tok);
+    // }
+    
+
+  // #ifdef _MSC_VER  
+    // template<class AsType, class... Args>
+    // std::enable_if_t<is_one_of_v<AsType, int, float, double, long double>, 
+    // std::optional<AsType> > getToken(Args&&... args){
+    //   auto tok = getToken(std::forward<Args>(args)...);
+
+    //   AsType value;
+    //   // auto [p, ec] = std::from_chars(tok.data(), tok.data()+tok.size(), value);
+    //   auto result = std::from_chars(tok.data(), tok.data()+tok.size(), value);
+    //   if(result.ec == std::errc{})
+    //     return std::nullopt;
+    //   return std::make_optional(value);
+    // }
+  // #else
+  //   // template<class AsType, class... Args>
+  //   // std::optional<AsType> getToken(Args&&... args){
+  //   template<class AsType, class... Args>
+  //   std::enable_if_t<is_one_of_v<AsType, int, float, double, long double>, 
+  //   std::optional<AsType> > getToken(Args&&... args){
+  //     auto tok = getToken(std::forward<Args>(args)...);
+  //     if(tok.empty())
+  //       return std::make_optional(static_cast<AsType>(-42)); // TODO: Safe fallback for when from_chars DNE
+  //     return std::nullopt;
+  //   }
+  // #endif
     
 
 
@@ -204,7 +264,10 @@ namespace jeff{
     bool refillBufferAfterCopy(){
       auto bufdest = buffers[0].end() - buf_sv.size();
       std::copy(buf_sv.begin(), buf_sv.end(), bufdest);
-      buf_sv = std::string_view(bufdest, buf_sv.size());
+      // NOTE: MSVC does not have std::array<char,N>::begin() return char*
+      auto bufdest_ptr = buffers[0].data() + buffers[0].size() - buf_sv.size();
+      buf_sv = std::string_view(bufdest_ptr, buf_sv.size());
+      //buf_sv = std::string_view(bufdest, buf_sv.size());
       return refillBuffer();
     }
 
@@ -240,7 +303,14 @@ namespace jeff{
     template<std::size_t Idx> [[nodiscard]]
     constexpr bool bufferContains(std::string_view sv) const{
       static_assert(Idx == 0 || Idx == 1);
-      return sv.data() >= buffers[Idx].begin() && sv.data() < buffers[Idx].end();
+      //return sv.data() >= buffers[Idx].begin() && sv.data() < buffers[Idx].end();
+
+      // Why doesn't array::data return pointer  in msvc :(
+      const auto begin = buffers[Idx].data();
+      const auto end = buffers[Idx].data() + buffers[Idx].size();
+      return sv.data() >= begin && sv.data() < end;
+      //return sv.data() >= buffers[Idx].begin() && sv.data() < buffers[Idx].end();
+      //return sv.data() >= buffers[Idx].begin() && sv.data() < buffers[Idx].end();
     }
 
     // Source needs to be accessed different ways depending on its type
@@ -271,10 +341,31 @@ namespace jeff{
     return makeTokenizer<BlockSize>(FileReader(std::move(filename)));
   }
 
+
+
+
+  using TokenizerPointer = std::shared_ptr<TokenizerBase>;
+  template<std::size_t BlockSize = 4096>   // TODO: Error handling
+  inline TokenizerPointer newFileTokenizer(std::string filename) {
+    using TokType = Tokenizer<FileReader, BlockSize>;
+    return std::shared_ptr<TokType>(new TokType(makeFileTokenizer<BlockSize>(filename)));
+    //return std::make_shared<tokenizer<FileReader, BlockSize>>(FileReader(std::move(filename)));
+  }
+
+
   template<std::size_t BlockSize = 4096>
   std::vector<std::string> tokenizeFile(std::string filename, std::string_view delimiters = TokenizerBase::default_delims){
     return makeFileTokenizer<BlockSize>(filename).getAllTokens(delimiters);
   }
+
+   
+  constexpr bool is_word(std::string_view sv) {
+    for (auto c : sv)
+      //if (!(std::isalnum(c) || c == '_'))
+        return false;
+    return true;
+  }
+
 
 
 
