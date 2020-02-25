@@ -4,11 +4,52 @@
 
 
 
-// TODO: Relocate this maybe
 #include <string_view>
+#include <string>
+#include <charconv>
 
-
+// TODO: Relocate this maybe
 namespace jeff{
+  // INTERESTING: Something I noticed while checking ASM, is that GCC does not optimize certain things the same way
+  // are encapsulated in a constexpr function: https://godbolt.org/z/2YAAJ3
+
+
+  //// Played around here: https://godbolt.org/z/TdjQPg
+  constexpr bool is_cntrl(char c){
+    return (c <= '\x1f' && c >= '\0') || c == '\x7f';
+    // return static_cast<unsigned char>(c) <= '\x1f' || c == '\x7f'; // same asm generation, gcc be schmahrt
+  }
+
+  constexpr bool is_print(char c){
+    return c >= ' ' && c <= '~';
+  }
+
+  constexpr bool is_space(char c){
+    // This seems the best and is branchless:  https://godbolt.org/z/inyHpf
+    return c == ' ' || (c >= '\t' && c <= '\r'); 
+    // return c >= '\t' && (c == ' ' || c <= '\r'); //x
+  }
+
+  constexpr bool is_blank(char c){
+    return c == '\t' || c == ' '; // ILP checks both at once
+  }
+
+  constexpr bool is_graph(char c){
+    return c > ' ' && c <= '~';
+  }
+
+
+  // // TODOOZY: subtractive
+  constexpr bool is_punct(char c){
+    return (c>='!' && c<='/') 
+        || (c>=':' && c<='@') 
+        || (c>='[' && c<='`')
+        || (c>='{' && c<='~');
+  }
+
+
+
+
   constexpr bool is_lower(char c){
     return c >= 'a' && c <= 'z';
   }
@@ -18,16 +59,30 @@ namespace jeff{
   constexpr bool is_digit(char c){
     return c >= '0' && c <= '9';
   }
+  constexpr bool is_xdigit(char c){
+    return (c >= '0' && c <= '9')
+        || (c >= 'A' && c <= 'F')
+        || (c >= 'a' && c <= 'f');
+  }
+
+
+
+
+
 
   constexpr bool is_alpha(char c){
     return is_lower(c) || is_upper(c);
   }
+
   constexpr bool is_alnum(char c){
     return is_digit(c) || is_alpha(c);
   }
+
+
   constexpr bool is_name(char c){
     return is_alnum(c) || c == '_';
   }
+  
 
 
   constexpr bool is_name(std::string_view sv){
@@ -35,6 +90,48 @@ namespace jeff{
       if(!is_name(c))
         return false;
     return true;
+  }
+
+
+  // NOTE: This is only for pretty printing
+  // TODO: Bad performance fix
+  namespace helper{
+    inline std::string escape_nonprintable(char c){
+      switch(c){
+      case '\0': return "\\0";
+      case '\t': return "\\t";
+      case '\n': return "\\n";
+      case '\v': return "\\v";
+      case '\f': return "\\f";
+      case '\r': return "\\r";
+      case '\b': return "\\b";
+      case '\a': return "\\a";
+      default:
+        std::string str(2, '\0');
+        auto [p, ec] = std::to_chars(str.data(), str.data()+str.size(), static_cast<unsigned char>(c), 16);
+        if(ec != std::errc())// this should never happen
+          return "{??}";
+        return "\\x" + str;
+      }
+    }
+  }// end helper
+  inline std::string escape(char c){
+    if(is_print(c))
+      return std::string(1,c);
+    return helper::escape_nonprintable(c);
+  }
+
+  inline std::string escaped(std::string_view sv){
+    std::string str;
+
+    for(auto c : sv){
+      if(is_print(c))
+        str += c;
+      else
+        str += helper::escape_nonprintable(c);
+    }
+
+    return str;
   }
 
   
