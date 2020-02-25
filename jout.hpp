@@ -1,8 +1,5 @@
 #pragma once
 
-#ifdef GLM_SETUP_INCLUDED
-#include "jlm.hpp"
-#endif
 
 
 #include <cstddef> // for std::byte
@@ -24,6 +21,9 @@
 #include <iostream>
 
 #include <functional>
+
+
+#include <sstream> // for tabulate
 
 #include "jinfo.hpp"
 #include "jtype.hpp"
@@ -96,30 +96,30 @@ namespace jeff{
 
 
 /** jfmt: class for ostream put formatting
- * 
+ *
  * methods:
  *  x:  output as hex (WIP, uses lazy and unreliable solution) TODO: better impl
- * 
+ *
  *  q:  Quoted. default to q<'"','"'>(arg), which wraps arg in '"' while putting into os
  *        These quote characters can be changed with the provided template specializations
  *        examples:
  *            os << q(expression);      // same as doing os << '"' << expression << '"'
  *            os << q<'|'>(10);         // same as doing os << '|' << 10 << '|'
  *            os << q<'{','}'>("e.g."); // same as doing os << '{' << "e.g." << '}'
- * 
+ *
  *  l:  As list: prints each element from a range-expression on its own line, with index at start of line
- *  
+ *
  *  t:  Thousands separator: for integral types, print the integer with thousands separators. TODO: floating types
- * 
+ *
  *  pl: Pad left  TODO: details
  *  pr: pad right TODO: details
- *  
+ *
  *  g: Group into something like "(a,b,c)""
- * 
+ *
  * */
 namespace jfmt{
   using namespace jeff;
-  
+
   // temp, jank solution and example of carry_lambda
   /*** x ***/
   template<class T>
@@ -155,8 +155,8 @@ namespace jfmt{
   constexpr decltype(auto) q(const T& t) noexcept{
     return q<'"'>(t);
   }
-  
-  
+
+
 
   /*** l ***/ // LIST
 
@@ -222,9 +222,9 @@ namespace jfmt{
       return helper::put_pad(os, npad, padc) << t;
     });
   }
-  
+
   /*** pr ***/ // pad the right
-  
+
   template<class T>
   constexpr decltype(auto) pr(const T& t, std::size_t npad, char padc = ' ') noexcept{ // by value, as this should only take scalars and is temporary anyway
     return carry_lambda([=, &t](auto& os) -> decltype(os){
@@ -255,7 +255,7 @@ namespace jfmt{
         os << "[ ";
         std::size_t n{0};
         (  (os << tupleArgs << (++n != sizeof...(Types) ? ", " : " ]")), ...  );
-    }, 
+    },
     theTuple
   );
   return os;
@@ -273,7 +273,7 @@ namespace jfmt{
 // Allow resolution of jfmt::helper::put_thousands in jeff
 namespace jeff{
   using jfmt::helper::put_thousands;
-}// end jeff 
+}// end jeff
 
 
 
@@ -292,11 +292,12 @@ namespace jeff{
 namespace jeff{
   static_assert(sizeof(char) == 1, "I only made this lib to work with sizeof(char)=1");
 
-  constexpr bool is_printable(char c){
-    return c <= '~' && c >= ' ';
-  }
+  // constexpr bool is_printable(char c){
+  //   return c <= '~' && c >= ' ';
+  // }
   constexpr bool is_printable(std::byte b){
-    return is_printable(std::to_integer<char>(b));
+    return is_print(std::to_integer<char>(b));
+    // return is_printable(std::to_integer<char>(b));
   }
 
   constexpr char nibble_to_hex(std::byte nib){
@@ -320,7 +321,7 @@ namespace jeff{
   constexpr decltype(auto) os_put_hex(T t){
     return helper::byte_to_hex_for_os(std::byte{t});
   }
-  
+
   // template<class... OsTypes, std::size_t N>
   // static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, std::byte){
 
@@ -330,9 +331,9 @@ namespace jeff{
 // NOTE: String literals pass-through os_putter
 
 namespace jeff{
-  
+
   namespace helper{
-    
+
     // Will basically never be constexpr under regular uses, as it's mainly for stream types
     //template<class Os, class T>
     //constexpr decltype(auto) os_putter(Os&& os, T&& t){
@@ -369,7 +370,7 @@ namespace jeff{
     // }
 
 
-    
+
     //template<class Os, class First, class... Rest>
     //decltype(auto) os_putter(Os&& os, First&& first, Rest&&... rest){
     //  return os_putter(os_putter(std::forward<Os>(os), std::forward<First>(first)), std::forward<Rest>(rest)...);
@@ -379,7 +380,7 @@ namespace jeff{
 
 
 
-  
+
 } // end namespace jeff
 
 
@@ -416,7 +417,7 @@ namespace jeff{
   // The string types are a mess and require loads of overloads to capture them all
 
   // Helper to deal with basic_string types consistently
-  
+
 
 #ifndef BOTCHED_OS_PUTTER
 
@@ -444,8 +445,8 @@ namespace jeff{
       return helper2::os_putter_string(std::forward<Os>(os), s);
     }
 
-  
-    
+
+
 
     template<class Os, auto N>
     decltype(auto) os_putter(Os&& os, const char (&test)[N] ){
@@ -453,10 +454,10 @@ namespace jeff{
     }
 
 
-    
+
     // template<class... OsTypes>
     // static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, std::byte b){
-    
+
 
     // This might not be needed, at least for use with ostream
     template<class Os>
@@ -478,7 +479,7 @@ namespace jeff{
     // // Why does sd::ostream reinterpret unsigned char* to char* for put operator???
     // template<class Os>
     // constexpr decltype(auto) os_putter(Os&& os, const std::uint8_t* bp){
-    //   // return 
+    //   // return
     //   // auto tmp = jeff::byte_to_hex(b);
     //   return std::forward<Os>(os) << (const void*)bp;
     // }
@@ -500,33 +501,33 @@ namespace jeff{
 /*
 template< class CharT, class Traits >
 std::basic_ostream<CharT, Traits>& endl( std::basic_ostream<CharT, Traits>& os );
-	
+
   */
 
 namespace jeff{
-  
+
 #ifndef BOTCHED_OS_PUTTER
 
   // Pass-through C-style arrays
-  template<class Os, class First> constexpr 
+  template<class Os, class First> constexpr
   std::enable_if_t<is_array_v<First>, Os&&> os_putter(Os&& os, First&& first){
     return std::forward<Os>(os) << std::forward<First>(first);
   }
 
-  template<class Os, class First> constexpr 
+  template<class Os, class First> constexpr
   std::enable_if_t<!is_array_v<First>, Os&&> os_putter(Os&& os, First&& first){
     return helper::os_putter(std::forward<Os>(os), std::forward<First>(first));
   }
 
   template<class Os, class First, class... Rest>
   decltype(auto) os_putter(Os&& os, First&& first, Rest&&... rest){
-    return os_putter( os_putter(std::forward<Os>(os), std::forward<First>(first)), 
-      std::forward<Rest>(rest)... ); 
+    return os_putter( os_putter(std::forward<Os>(os), std::forward<First>(first)),
+      std::forward<Rest>(rest)... );
   }
   // template<class Os, class First, class Second, class... Rest>
   // constexpr decltype(auto) os_putter(Os&& os, First&& first, Second&& second,  Rest&&... rest){
-  //   return os_putter( os_putter(std::forward<Os>(os), std::forward<First>(first)), 
-  //     std::forward<Second>(second), std::forward<Rest>(rest)... ); 
+  //   return os_putter( os_putter(std::forward<Os>(os), std::forward<First>(first)),
+  //     std::forward<Second>(second), std::forward<Rest>(rest)... );
   // }
 
 
@@ -535,12 +536,12 @@ namespace jeff{
   template<class Os, class... Args>
   decltype(auto) put_args(Os&& os, Args&&... args){
     int ctr{};
-    return ( (helper::os_putter( ctr++?os<<", ":os , std::forward<Args>(args))), ...); 
+    return ( (helper::os_putter( ctr++?os<<", ":os , std::forward<Args>(args))), ...);
   }
 #endif
 // template< class CharT, class Traits >
 // std::basic_ostream<CharT, Traits>& endl( std::basic_ostream<CharT, Traits>& os );
-  
+
   // template<class T>
   // std::function<std::ostream&(std::ostream&)> put(const T& t){
   //   return [&t](std::ostream& os){
@@ -570,7 +571,7 @@ static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>
         os << "[ ";
         std::size_t n{0};
         (  (os << tupleArgs << (++n != sizeof...(Types) ? ", " : " ]")), ...  );
-    }, 
+    },
     theTuple
   );
   return os;
@@ -671,7 +672,7 @@ inline std::ostream& operator<<(std::ostream& os, const unsigned char* bp){
   //         os << "[ ";
   //         std::size_t n{0};
   //         (  (os << tupleArgs << (++n != sizeof...(Types) ? ", " : " ]")), ...  );
-  //     }, 
+  //     },
   //     theTuple
   //   );
   //   return os;
@@ -695,9 +696,155 @@ inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>
 // } // end namespace jos
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+namespace jeff{
+
+
+  /** make tabular prints
+   * 
+   *  add field with put operator (<<)
+   *  add row with unary + operator
+   *  
+   *  e.g.
+   *    tabulator tab;
+   *    tab << "these" << 9.123 << "will be on the first" << "row"
+   *    +tab << 1234 << "now these are on the second row"
+   *    +tab << "last row"
+   * 
+   * */
+  class tabulator{
+  public:
+    using row_type = std::vector<std::string>;
+
+  private:
+    // std::vector<std::pair<row_type, std::size_t>> rows;
+    std::vector<row_type> rows;
+    std::vector<std::size_t> widths;
+
+
+  public:
+    // void info(){
+    //   std::cout << "<tabulate> rows.size() = " << rows.size();
+    //   std::cout << "\n  Column Widths:\t";
+    //   for(auto s : widths)
+    //     std::cout << s << '\t';
+    //   std::cout << "\n  Row Field Counts:";
+    //   for(const auto& row : rows)
+    //     std::cout << "\n\t" << row.size();
+    //   std::cout << "\n</tabulate>" << std::endl;
+    // }
+
+  private:
+    tabulator& end_row(){
+      rows.emplace_back();
+      return *this;
+    }
+
+    tabulator& push_field(std::string str){
+      auto& currentRow = rows.empty() ? rows.emplace_back() : rows.back();
+      auto currentField = currentRow.size();
+
+
+      // Set the appropriate width field if needed
+      if(currentField >= widths.size())
+        widths.emplace_back(str.size());
+      else
+        widths[currentField] = std::max(widths[currentField], str.size());
+
+      // Move the string into the row
+      currentRow.emplace_back(std::move(str));
+
+      return *this;
+    }
+
+    tabulator& escape_and_push_field(std::string str){
+      return push_field(jeff::escaped(str));
+    }
+  public:
+
+    tabulator& operator<<(std::string str){
+      return escape_and_push_field(str);
+    }
+    tabulator& operator<<(char c){
+      return push_field(jeff::escape(c));
+    }
+
+
+
+
+
+    template<class T>
+    tabulator& operator<<(T&& t){
+      using ::operator<<; // make MSVC a happi boi
+
+      std::ostringstream ss;
+      ss << std::forward<T>(t);
+      // return push_field(std::move(ss).str()); // :( this isnt useful until c++20
+      // return push_field(std::move(*ss.rdbuf()).str()); // Equivalent orkaround to avoid copy
+      return escape_and_push_field(std::move(*ss.rdbuf()).str());
+    }
+
+
+
+    // start a new row
+    tabulator& operator+(){
+      return end_row();
+    }
+
+    void clear(){
+      rows.clear();
+      widths.clear();
+    }
+  
+
+
+    
+  //// TODO: Get fancy with dynamic field separators and table borders
+    std::ostream& os_putter(std::ostream& os) const{
+      constexpr decltype(auto) field_sep = "    ";
+      for(const auto& row : rows){
+        for(std::size_t i=0; i<row.size(); ++i){
+          const auto& field = row[i];
+          const auto width = widths[i];
+          // pad the right side for now
+          /// TODO: GET FANCY WITH PADDING OPTIONS
+          (i==0 ? os : os<<field_sep)  << field << std::string(width - field.size(), ' ');
+        }
+        os << '\n';
+      }
+      return os;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const tabulator& tab){
+      return tab.os_putter(os);
+    }
+  };
+
+
+} // end jeff
+
+
+
+
+
+
+
+
 namespace jeff {
   //using namespace jos; // IS THIS REALLY WHAT I HAVE TO DO TO MAKE MSVC HAPPY???
-  
+
   //template<class T>inline constexpr bool fuck_msvc = jeff::is_same_nocvref_any_v<T, glm::vec3, glm::vec2>;
 
 
@@ -730,20 +877,20 @@ namespace jeff {
 
   //template<class T>
   //static ::std::ostream& os_putter(::std::ostream& os, const T& t) {
-  //  using ::operator<<; // holy shit fuck msvc 
+  //  using ::operator<<; // holy shit fuck msvc
   //  // CREDIT: https://stackoverflow.com/a/32822359/6232717
   //  return os << t;
   //}
 
   template<class Os, class T>
   inline decltype(auto) os_putter(Os&& os, T&& t) {
-    using ::operator<<; // holy shit fuck msvc 
+    using ::operator<<; // holy shit fuck msvc
     // CREDIT: https://stackoverflow.com/a/32822359/6232717
     return std::forward<Os>(os) << std::forward<T>(t);
   }
   template<class Os>
   inline decltype(auto) os_putter(Os&& os, bool b) {
-    using ::operator<<; // holy shit fuck msvc 
+    using ::operator<<; // holy shit fuck msvc
     return std::forward<Os>(os) << (b ? "true" : "false");
   }
 
@@ -761,7 +908,7 @@ namespace jeff {
   static decltype(auto) os_putter(Os&& os, T&& t, U&& u, Rest&&... rest) {
     return os_putter(
       os_putter(std::forward<Os>(os), std::forward<T>(t)) << ", ", // separate, temp
-      std::forward<U>(u), 
+      std::forward<U>(u),
       std::forward<Rest>(rest)...
     );
     //return std::forward<Os>(os) << std::forward<T>(t);
