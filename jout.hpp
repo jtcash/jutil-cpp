@@ -22,6 +22,7 @@
 
 #include <functional>
 
+#include <numeric>
 
 #include <sstream> // for tabulate
 
@@ -713,17 +714,17 @@ namespace jeff{
 
 
   /** make tabular prints
-   * 
+   *
    *  add field with put operator (<<)
    *  add row blank row with unary + operator
    *  add row with the subscript operator, described at the bottom of this class
-   *  
+   *
    *  e.g.
    *    tabulator tab;
    *    tab << "these" << 9.123 << "will be on the first" << "row"
    *    +tab << 1234 << "now these are on the second row"
    *    +tab << "last row"
-   * 
+   *
    * */
   class tabulator{
   public:
@@ -794,29 +795,9 @@ namespace jeff{
       rows.clear();
       widths.clear();
     }
-  
 
 
-    
-  //// TODO: Get fancy with dynamic field separators and table borders
-    std::ostream& os_putter(std::ostream& os) const{
-      constexpr decltype(auto) field_sep = "    ";
-      for(const auto& row : rows){
-        for(std::size_t i=0; i<row.size(); ++i){
-          const auto& field = row[i];
-          const auto width = widths[i];
-          /// pad the right side for now          /// TODO: GET FANCY WITH PADDING OPTIONS
-          (i==0 ? os : os<<field_sep)  << field << std::string(width - field.size(), ' ');
-        }
-        if(!row.empty())
-          os << '\n';
-      }
-      return os;
-    }
 
-    friend std::ostream& operator<<(std::ostream& os, const tabulator& tab){
-      return tab.os_putter(os << '\n');
-    }
 
 
 
@@ -853,12 +834,138 @@ namespace jeff{
 
 
     /// NOTE: This one is probably a bad idea, but I think the syntax looks pretty!
+    //    e.g.  t << a, b, c, d;
     template<class T>
     tabulator& operator,(T&& t){
       return operator<<(std::forward<T>(t));
     }
 
 
+
+
+  //// TODO: Get fancy with dynamic field separators and table borders
+    std::ostream& os_putter(std::ostream& os) const{
+      return print(os, "    ", '|', '-');
+      // constexpr decltype(auto) field_sep = "    ";
+      // for(const auto& row : rows){
+      //   for(std::size_t i=0; i<row.size(); ++i){
+      //     const auto& field = row[i];
+      //     const auto width = widths[i];
+      //     /// pad the right side for now          /// TODO: GET FANCY WITH PADDING OPTIONS
+      //     (i==0 ? os : os<<field_sep)  << field << std::string(width - field.size(), ' ');
+      //   }
+      //   if(!row.empty())
+      //     os << '\n';
+      // }
+      // return os;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const tabulator& tab){
+      return tab.os_putter(os << '\n');
+    }
+
+
+
+
+    std::ostream& print(std::ostream& os, const std::string& sep, char vborder, char hborder) const{
+      if(widths.empty())
+        return os << "{[empty tabulator]}";
+
+      /// NOTE: This could be made generic
+      const std::string vborder_sep("  "); // Space between content and begin/end characters 
+
+      const std::string vstart = vborder + vborder_sep; // Begin rows with this
+      const std::string vstop = vborder_sep + vborder;  // End rows with this
+
+      // The width of the content of a full row
+      const std::size_t content_width = std::accumulate(widths.begin(), widths.end(), std::size_t{})
+                                        + (widths.size() - 1)*sep.size();
+      // The width of an entire row
+      const std::size_t total_width = content_width + vstart.size() + vstop.size();
+      // Horizontal border line
+      const std::string hline(total_width, hborder); 
+
+
+      os << hline;
+
+      // Write out the formatted rows
+      for(std::size_t r=0; r<rows.size(); ++r){
+        const auto& row = rows[r];
+        
+        std::size_t row_width = 0;
+
+        if(!(row.empty() && r + 1 == rows.size())){ // skip last row if empty
+          os << '\n' << vstart;
+          for(std::size_t i=0; i<row.size(); ++i){
+            const auto& field = row[i];
+
+            if (i != 0){
+              os << sep;
+              row_width += sep.size();
+            }
+            os << field << std::string(widths[i] - field.size(), ' ');
+
+            row_width += widths[i];
+          }
+          if(row.size() < widths.size())
+            os << std::string(content_width - row_width, ' ');
+          os << vstop;
+        }
+      }
+      return os << '\n' << hline << '\n';
+    }
+
+
+    private:
+    class putter{
+      friend class tabulator;
+      tabulator& owner;
+      const std::string& sep;
+      char vborder;
+      char hborder;
+      putter(tabulator& owner, const std::string& sep, char vborder, char hborder) :
+        owner{owner}, sep{sep}, vborder{vborder}, hborder{hborder}  {  }
+      public:
+
+      friend std::ostream& operator<<(std::ostream& os, const putter& putter){
+        return putter.owner.print(os << '\n', putter.sep, putter.vborder, putter.hborder);
+      }
+
+    };
+    public:
+
+    putter operator()(const std::string& sep, char vborder = '|', char hborder = '-'){
+      return {*this, sep, vborder, hborder};
+    }
+    auto operator()(char vborder = '|', char hborder = '-'){
+      return operator()("    ", vborder, hborder);
+    }
+    // template<class Sep, class VBorder, class HBorder>
+    // class putter{
+    //   friend class tabulator;
+    //   tabulator& owner;
+    //   Sep sep;
+    //   VBorder vborder;
+    //   HBorder hborder;
+    //   putter(tabulator& owner, Sep sep, VBorder vborder, HBorder hborder) :
+    //     owner{owner}, vborder{vborder}, hborder{hborder}, sep{sep} {  }
+    //   public:
+
+    //   friend std::ostream& operator<<(std::ostream& os, const putter& putter){
+    //     return owner.print(os, sep, vborder, hborder);
+    //   }
+
+    // };
+    // public:
+
+    // template<class Sep, class VBorder, class HBorder>
+    // auto operator()(Sep sep, VBorder vborder, HBorder hborder){
+    //   return putter<Sep, VBorder, HBorder>(*this, sep, vborder, hborder)
+    // }
+    // template<class VBorder, class HBorder>
+    // auto operator()(VBorder vborder, HBorder hborder){
+    //   return operator("    ", vborder, hborder);
+    // }
 
   };
 
