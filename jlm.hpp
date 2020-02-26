@@ -9,6 +9,7 @@
 
 
 #include "jtype.hpp"
+#include "jout.hpp" // for tabulator
 
 
 // template<class... OsTypes>
@@ -46,23 +47,18 @@ inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>
 
 // M rows; N columns 
 template<class... OsTypes, auto N, auto M, class T, auto Q>
-inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const glm::mat<N, M, T, Q>& m) {
-  if constexpr (M == 1) {
-    return jeff::glm_printer(os << "[ ", glm::transpose(m)[0], " ") << " ]";
-    //return os << "[ " << m[0][0] << " ]";
+inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const glm::mat<N, M, T, Q>& mat) {
+  using size_type = typename glm::mat<N,M,T,Q>::length_type;
+  jeff::tabulator tab;
+  for (size_type m=0; m<M; ++m) {
+    for (size_type n=0; n<N; ++n) {
+      tab << mat[n][m];
+    }
+    +tab;
   }
 
-  return os << "TODO";/*
-
-
-
-
-
-  os << "< " << v[0];
-  if constexpr (N > 1)
-    for (auto n = 1; n<N; ++n)
-      os << ", " << v[n];
-  return os << " >";*/
+  return os << tab;
+  
 }
 ////
 //namespace jeff {
