@@ -544,7 +544,7 @@ namespace jeff{
       const std::string vstop = vborder_sep + vborder;  // End rows with this
 
       // The width of the content of a full row
-      const std::size_t content_width = std::accumulate(widths.begin(), widths.end(), std::size_t{})
+      const std::size_t content_width = std::accumulate(widths.begin(), widths.end(), std::size_t{0})
                                         + (widths.size() - 1)*sep.size();
       // The width of an entire row
       const std::size_t total_width = content_width + vstart.size() + vstop.size();
@@ -603,8 +603,9 @@ namespace jeff{
     putter operator()(const std::string& sep, char vborder = '|', char hborder = '-'){
       return {*this, sep, vborder, hborder};
     }
-    auto operator()(char vborder = '|', char hborder = '-'){
-      return operator()("    ", vborder, hborder);
+    auto operator()(char vborder, char hborder = '-'){
+      static std::string default_sep{"    "};
+      return operator()(default_sep, vborder, hborder);
     }
   };
 
