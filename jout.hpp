@@ -36,17 +36,11 @@
 
 
 
-// TODO: Documentation
-
-
-#define BOTCHED_OS_PUTTER
+/// TODO: Documentation
 
 
 
-
-
-
-// NOTE: Also defines namespace jfmt
+/// NOTE: Also defines namespace jfmt
 
 
 
@@ -77,17 +71,6 @@ namespace jeff{
   constexpr decltype(auto) carry_lambda(Func f) noexcept{
     return helper::lambda_carrier_t<Func>{f};
   }
-
-
-  // // temp, jank solution and example of carry_lambda
-  // template<class T>
-  // constexpr decltype(auto) hex(T t){
-  //   return carry_lambda([t](auto& os) -> decltype(os){
-  //     return os << reinterpret_cast<void*>(t);
-  //   });
-  // } // moved to jfmt namespace
-
-
 
 } // end namespace jeff
 
@@ -249,19 +232,6 @@ namespace jfmt{
   }// end helper
 
 
-/*
-
-  std::apply(
-    [&os](Types const&... tupleArgs){
-        os << "[ ";
-        std::size_t n{0};
-        (  (os << tupleArgs << (++n != sizeof...(Types) ? ", " : " ]")), ...  );
-    },
-    theTuple
-  );
-  return os;
-  */
-
   template<class... Types>
   constexpr decltype(auto) g(const Types&... types) noexcept{ // by value, as this should only take scalars and is temporary anyway
     return carry_lambda([&types...](auto& os) -> decltype(os){
@@ -278,14 +248,6 @@ namespace jeff{
 
 
 
-
-
-
-
-
-
-
-// Os overloading
 
 
 
@@ -323,236 +285,9 @@ namespace jeff{
     return helper::byte_to_hex_for_os(std::byte{t});
   }
 
-  // template<class... OsTypes, std::size_t N>
-  // static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, std::byte){
-
-  // }
-}
-
-// NOTE: String literals pass-through os_putter
-
-namespace jeff{
-
-  namespace helper{
-
-    // Will basically never be constexpr under regular uses, as it's mainly for stream types
-    //template<class Os, class T>
-    //constexpr decltype(auto) os_putter(Os&& os, T&& t){
-    //  if constexpr(indicate_unspecialized_os_putter)
-    //    return std::forward<Os>(os) << '[' << std::forward<T>(t) << ']' << types_sv<T&&>;
-    //    // return std::forward<Os>(os) << '[' << std::forward<T>(t) << ']';
-    //  return std::forward<Os>(os) << std::forward<T>(t);
-    //}
-  #ifndef BOTCHED_OS_PUTTER
-    template<class T>
-    std::ostream& os_putter(std::ostream& os, T&& t) {
-      if constexpr (indicate_unspecialized_os_putter)
-        return os << '[' << std::forward<T>(t) << ']' << types_sv<T&&>;
-        // return std::forward<Os>(os) << '[' << std::forward<T>(t) << ']';
-      return os << std::forward<T>(t);
-    }
-  #endif
-    // Prevent C-style array types from being snatched (also string literals)
-    // template<class Os, class T, size_t N>
-    // constexpr decltype(auto) os_putter(Os&& os,  const T (&t)[N]){
-    //   return std::forward<Os>(os) << std::forward<decltype(t)>(t);
-    // }
-    // template<class Os, class T, size_t N>
-    // constexpr decltype(auto) os_putter(Os&& os,  T (&&t)[N]){
-    //   return std::forward<Os>(os) << std::move(t);
-    // }
-    // template<class Os, class T, size_t N>
-    // constexpr decltype(auto) os_putter(Os&& os,  const  T (&t)[N]){
-    //   return std::forward<Os>(os) << std::forward<decltype(t)>(t);
-    // }
-    // template<class Os, class T, size_t N>
-    // constexpr decltype(auto) os_putter(Os&& os, const  T (&&t)[N]){
-    //   return std::forward<Os>(os) << std::move(t);
-    // }
-
-
-
-    //template<class Os, class First, class... Rest>
-    //decltype(auto) os_putter(Os&& os, First&& first, Rest&&... rest){
-    //  return os_putter(os_putter(std::forward<Os>(os), std::forward<First>(first)), std::forward<Rest>(rest)...);
-    //}
-  }
-
-
-
-
-
-} // end namespace jeff
-
-
-
-namespace jeff{
-#ifndef BOTCHED_OS_PUTTER
-
-  namespace helper{
-    template<class Os>
-    decltype(auto) os_putter(Os&& os, bool b){
-      return std::forward<Os>(os) << (b ? "true" : "false");
-    }
-    // template<class Os>
-    // constexpr decltype(auto) os_putter(Os&& os, bool b){
-    //   return std::forward<Os>(os) << (b ? "true" : "false");
-    // }
-
-    template<class Os>
-    decltype(auto) os_putter(Os&& os, const char* str){
-      return std::forward<Os>(os) << '"' << str << '"';
-    }
-    template<class Os, class... SvTypes>
-    decltype(auto) os_putter(Os&& os, std::basic_string_view<SvTypes...> sv){
-      return std::forward<Os>(os) << '"' << sv << "\"sv";
-    }
-  }
-#endif
-  // template<class Os, class... SvTypes>
-  // constexpr decltype(auto) os_putter(Os&& os, std::basic_string_view<SvTypes...>&& sv){
-  //   return std::forward<Os>(os) << '"' << sv << "\"sv";
-  // }
-
-
-  // The string types are a mess and require loads of overloads to capture them all
-
-  // Helper to deal with basic_string types consistently
-
-
-#ifndef BOTCHED_OS_PUTTER
-
-  namespace helper{
-    namespace helper2{
-      template<class Os, class String>
-      decltype(auto) os_putter_string(Os&& os, String&& s){
-        return std::forward<Os>(os) << '"' << std::forward<String>(s) << "\"s";
-      }
-    }
-    template<class Os, class... STypes>
-    decltype(auto) os_putter(Os&& os, std::basic_string<STypes...>&& s){
-      return helper2::os_putter_string(std::forward<Os>(os), std::move(s));
-    }
-    template<class Os, class... STypes>
-    decltype(auto) os_putter(Os&& os,  const std::basic_string<STypes...>&& s){
-      return helper2::os_putter_string(std::forward<Os>(os), std::move(s));
-    }
-    template<class Os, class... STypes>
-    decltype(auto) os_putter(Os&& os, std::basic_string<STypes...>& s){
-      return helper2::os_putter_string(std::forward<Os>(os), s);
-    }
-    template<class Os, class... STypes>
-    decltype(auto) os_putter(Os&& os, const std::basic_string<STypes...>& s){
-      return helper2::os_putter_string(std::forward<Os>(os), s);
-    }
-
-
-
-
-    template<class Os, auto N>
-    decltype(auto) os_putter(Os&& os, const char (&test)[N] ){
-      return std::forward<Os>(os) << '`' << test << '`';
-    }
-
-
-
-    // template<class... OsTypes>
-    // static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, std::byte b){
-
-
-    // This might not be needed, at least for use with ostream
-    template<class Os>
-    decltype(auto) os_putter(Os&& os, std::byte b){
-      auto tmp = jeff::byte_to_hex(b);
-      return std::forward<Os>(os) << "0x" << tmp.data();
-    }
-
-    template<class Os>
-    decltype(auto) os_putter(Os&& os, char c){
-      if(is_printable(c))
-        return std::forward<Os>(os) << '\'' << c << '\'';
-      auto tmp = byte_to_hex(std::byte(c));
-      return std::forward<Os>(os) << "'\\x" << tmp.data() << '\'';
-    }
-
-
-
-    // // Why does sd::ostream reinterpret unsigned char* to char* for put operator???
-    // template<class Os>
-    // constexpr decltype(auto) os_putter(Os&& os, const std::uint8_t* bp){
-    //   // return
-    //   // auto tmp = jeff::byte_to_hex(b);
-    //   return std::forward<Os>(os) << (const void*)bp;
-    // }
-
-  }
-#endif
-
 }
 
 
-
-
-
-
-
-
-
-
-/*
-template< class CharT, class Traits >
-std::basic_ostream<CharT, Traits>& endl( std::basic_ostream<CharT, Traits>& os );
-
-  */
-
-namespace jeff{
-
-#ifndef BOTCHED_OS_PUTTER
-
-  // Pass-through C-style arrays
-  template<class Os, class First> constexpr
-  std::enable_if_t<is_array_v<First>, Os&&> os_putter(Os&& os, First&& first){
-    return std::forward<Os>(os) << std::forward<First>(first);
-  }
-
-  template<class Os, class First> constexpr
-  std::enable_if_t<!is_array_v<First>, Os&&> os_putter(Os&& os, First&& first){
-    return helper::os_putter(std::forward<Os>(os), std::forward<First>(first));
-  }
-
-  template<class Os, class First, class... Rest>
-  decltype(auto) os_putter(Os&& os, First&& first, Rest&&... rest){
-    return os_putter( os_putter(std::forward<Os>(os), std::forward<First>(first)),
-      std::forward<Rest>(rest)... );
-  }
-  // template<class Os, class First, class Second, class... Rest>
-  // constexpr decltype(auto) os_putter(Os&& os, First&& first, Second&& second,  Rest&&... rest){
-  //   return os_putter( os_putter(std::forward<Os>(os), std::forward<First>(first)),
-  //     std::forward<Second>(second), std::forward<Rest>(rest)... );
-  // }
-
-
-
-
-  template<class Os, class... Args>
-  decltype(auto) put_args(Os&& os, Args&&... args){
-    int ctr{};
-    return ( (helper::os_putter( ctr++?os<<", ":os , std::forward<Args>(args))), ...);
-  }
-#endif
-// template< class CharT, class Traits >
-// std::basic_ostream<CharT, Traits>& endl( std::basic_ostream<CharT, Traits>& os );
-
-  // template<class T>
-  // std::function<std::ostream&(std::ostream&)> put(const T& t){
-  //   return [&t](std::ostream& os){
-  //     return os_putter(os, t);
-  //   };
-  // }
-
-
-
-} // end namespace jeff
 
 //// std::ostream << std::tuple
 
@@ -585,16 +320,6 @@ inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>
     os << (ctr++ == 0 ? "{ ": ", ") << e;
   return os << (ctr==0 ? "{ }" : " }");
 }
-// TODO: Why no worky! This is not seen by overload resolution!?!?!
-
-
-// template<typename... Types>
-// inline std::ostream& operator<<(std::ostream& os, std::vector<Types...> const& vec){
-//   int ctr{};
-//   for(auto&& e : vec)
-//     os << (ctr++ == 0 ? "{ ": ", ") << e;
-//   return os << (ctr==0 ? "{ }" : " }");
-// }
 
 
 template<class... OsTypes, std::size_t N>
@@ -604,16 +329,8 @@ inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>
     os << jeff::os_put_hex(e) << ' ';
 
   return os << '}';
-  // int ctr{};
-  // for(auto&& e : vec)
-    // os << (ctr++ == 0 ? "{ ": ", ") << e;
-  // return os << (ctr==0 ? "{ }" : " }");
 }
 
-// template<class... OsTypes, std::size_t N>
-// static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const std::uint8_t* bp){
-//   return os << (void*)(bp);
-// }
 
 template<class... OsTypes>
 static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const unsigned char* bp){
@@ -626,17 +343,6 @@ static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>
 }
 
 
-
-//TODO: I don't know why this overload catches but the above doesn't. Perhaps there is some issue to do
-// with the above being less specific due to type pack, try using exact format of ostream
-/*
-inline basic_ostream<char, _Traits> &
-    operator<<(basic_ostream<char, _Traits>& ___out, const unsigned char* __s)
-    { return (___out << reinterpret_cast<const char*>(__s)); }
-*/
-
-
-
 inline std::ostream& operator<<(std::ostream& os, const unsigned char* bp){
   return os << (void*)(bp);
 }
@@ -645,7 +351,7 @@ inline std::ostream& operator<<(std::ostream& os, const unsigned char* bp){
 
 
 
-
+/// RESOLVED: mostly i think?
 // NOTE: To fix, is should have a specific namespace for ostream operator overloads, that way I can
 // just use that namespace before a put that requires the overload. Or maybe even have a using namespace
 // directive for that namespace by default.
@@ -653,57 +359,15 @@ inline std::ostream& operator<<(std::ostream& os, const unsigned char* bp){
 // MSVC does not look outside of the current namespace for overload, while GCC does
 // this makes me think that MSVC is wrong because why the hell would you not be able to resolve
 // the ostream put operator overload if you are inside of a namespace?
-#ifdef BOTCHED_OS_PUTTER
 
-// namespace jos{
-  // template<class... OsTypes, typename... Types>
-  // static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const std::vector<Types...> & vec) {
-  //   int ctr{};
-  //   for (auto&& e : vec)
-  //     os << (ctr++ == 0 ? "{ ": ", ") << e;
-  //   return os << (ctr==0 ? "{ }" : " }");
-  // }
-
-
-  // template<class... OsTypes, typename... Types>
-  // inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os,
-  //                                                   const std::tuple<Types...> & theTuple){
-  //   std::apply(
-  //     [&os](Types const&... tupleArgs){
-  //         os << "[ ";
-  //         std::size_t n{0};
-  //         (  (os << tupleArgs << (++n != sizeof...(Types) ? ", " : " ]")), ...  );
-  //     },
-  //     theTuple
-  //   );
-  //   return os;
-  // }
-  template<class... OsTypes, class T, class U>
-  inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const std::pair<T,U>& p) {
-    return os << '(' << p.first << ',' << p.second << ')';
-  }
+template<class... OsTypes, class T, class U>
+inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const std::pair<T,U>& p) {
+  return os << '(' << p.first << ',' << p.second << ')';
+}
 template<class... OsTypes>
 inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, bool b) {
   return os << (b ? "true" : "false");
 }
-// // template<class... OsTypes>
-// // inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, bool b) {
-// //   return os <<( b ? "true" : "false");
-// // }
-
-// // inline std::ostream& operator<<(std::ostream& os, bool b) {
-// //   return os << b ? "true" : "false";
-// // }
-// } // end namespace jos
-
-
-
-
-
-
-
-
-
 
 
 
@@ -725,6 +389,7 @@ namespace jeff{
    *    +tab << 1234 << "now these are on the second row"
    *    +tab << "last row"
    *
+   *  TODO: Genericize for putting into any stream type
    * */
   class tabulator{
   public:
@@ -808,6 +473,7 @@ namespace jeff{
           t[4][5][6][7];
           t[8][9][10][11];
           t[12][13]["test"][15];
+
    * */
   private:
     class tab_helper{
@@ -940,33 +606,6 @@ namespace jeff{
     auto operator()(char vborder = '|', char hborder = '-'){
       return operator()("    ", vborder, hborder);
     }
-    // template<class Sep, class VBorder, class HBorder>
-    // class putter{
-    //   friend class tabulator;
-    //   tabulator& owner;
-    //   Sep sep;
-    //   VBorder vborder;
-    //   HBorder hborder;
-    //   putter(tabulator& owner, Sep sep, VBorder vborder, HBorder hborder) :
-    //     owner{owner}, vborder{vborder}, hborder{hborder}, sep{sep} {  }
-    //   public:
-
-    //   friend std::ostream& operator<<(std::ostream& os, const putter& putter){
-    //     return owner.print(os, sep, vborder, hborder);
-    //   }
-
-    // };
-    // public:
-
-    // template<class Sep, class VBorder, class HBorder>
-    // auto operator()(Sep sep, VBorder vborder, HBorder hborder){
-    //   return putter<Sep, VBorder, HBorder>(*this, sep, vborder, hborder)
-    // }
-    // template<class VBorder, class HBorder>
-    // auto operator()(VBorder vborder, HBorder hborder){
-    //   return operator("    ", vborder, hborder);
-    // }
-
   };
 
 
@@ -980,45 +619,7 @@ namespace jeff{
 
 
 namespace jeff {
-  //using namespace jos; // IS THIS REALLY WHAT I HAVE TO DO TO MAKE MSVC HAPPY???
-
-  //template<class T>inline constexpr bool fuck_msvc = jeff::is_same_nocvref_any_v<T, glm::vec3, glm::vec2>;
-
-
-
-  //template<class Os, class T, std::enable_if_t<!fuck_msvc<T>, int> = 0 >
-  //decltype(auto) os_putter(Os&& os, T&& t) {
-  //  return std::forward<Os>(os) << std::forward<T>(t);
-  //}
-  ///*template<class Os, class T>
-  //decltype(auto) os_putter(Os&& os, T&& t) {
-  //  return std::forward<Os>(os) << std::forward<T>(t);
-  //}*/
-
-  //template<class Os>
-  //inline decltype(auto) os_putter(Os&& os, const glm::vec3& v) {
-  //  return std::forward<Os>(os) << v;
-  //}
-  //template<class Os>
-  //inline decltype(auto) os_putter(Os&& os,  const glm::vec2& v) {
-  //  return std::forward<Os>(os) << v;
-  //}
-
-  //inline std::ostream& os_putter(std::ostream& os, const glm::vec2& v) {
-  //  return os << v;
-  //}
-
-  //template<class T>
-  //static ::std::ostream& operator<<(s)
-
-
-  //template<class T>
-  //static ::std::ostream& os_putter(::std::ostream& os, const T& t) {
-  //  using ::operator<<; // holy shit fuck msvc
-  //  // CREDIT: https://stackoverflow.com/a/32822359/6232717
-  //  return os << t;
-  //}
-
+ 
   template<class Os, class T>
   inline decltype(auto) os_putter(Os&& os, T&& t) {
     using ::operator<<; // holy shit fuck msvc
@@ -1032,15 +633,6 @@ namespace jeff {
   }
 
 
-  //template<class Os, class T, class U, class... Rest>
-  //static ::std::ostream& os_putter(::std::ostream& os, const T& t, const U& u, Rest&&... rest) {
-  //  return os_putter(
-  //    os_putter(std::forward<Os>(os), std::forward<T>(t)) << ", ", // separate, temp
-  //    std::forward<U>(u),
-  //    std::forward<Rest>(rest)...
-  //  );
-  //  //return std::forward<Os>(os) << std::forward<T>(t);
-  //}
   template<class Os, class T, class U, class... Rest>
   static decltype(auto) os_putter(Os&& os, T&& t, U&& u, Rest&&... rest) {
     return os_putter(
@@ -1051,4 +643,3 @@ namespace jeff {
     //return std::forward<Os>(os) << std::forward<T>(t);
   }
 }
-#endif
