@@ -715,7 +715,8 @@ namespace jeff{
   /** make tabular prints
    * 
    *  add field with put operator (<<)
-   *  add row with unary + operator
+   *  add row blank row with unary + operator
+   *  add row with the subscript operator, described at the bottom of this class
    *  
    *  e.g.
    *    tabulator tab;
@@ -729,22 +730,8 @@ namespace jeff{
     using row_type = std::vector<std::string>;
 
   private:
-    // std::vector<std::pair<row_type, std::size_t>> rows;
     std::vector<row_type> rows;
     std::vector<std::size_t> widths;
-
-
-  public:
-    // void info(){
-    //   std::cout << "<tabulate> rows.size() = " << rows.size();
-    //   std::cout << "\n  Column Widths:\t";
-    //   for(auto s : widths)
-    //     std::cout << s << '\t';
-    //   std::cout << "\n  Row Field Counts:";
-    //   for(const auto& row : rows)
-    //     std::cout << "\n\t" << row.size();
-    //   std::cout << "\n</tabulate>" << std::endl;
-    // }
 
   private:
     tabulator& end_row(){
@@ -818,18 +805,61 @@ namespace jeff{
         for(std::size_t i=0; i<row.size(); ++i){
           const auto& field = row[i];
           const auto width = widths[i];
-          // pad the right side for now
-          /// TODO: GET FANCY WITH PADDING OPTIONS
+          /// pad the right side for now          /// TODO: GET FANCY WITH PADDING OPTIONS
           (i==0 ? os : os<<field_sep)  << field << std::string(width - field.size(), ' ');
         }
-        os << '\n';
+        if(!row.empty())
+          os << '\n';
       }
       return os;
     }
 
     friend std::ostream& operator<<(std::ostream& os, const tabulator& tab){
-      return tab.os_putter(os);
+      return tab.os_putter(os << '\n');
     }
+
+
+
+  /**
+   *  allow tabulation using a syntax like this
+          jeff::tabulator t;
+          t[0][1][2][3];
+          t[4][5][6][7];
+          t[8][9][10][11];
+          t[12][13]["test"][15];
+   * */
+  private:
+    class tab_helper{
+      friend class tabulator;
+      tabulator& owner;
+      tab_helper(tabulator& owner) : owner{owner} { }
+    public:
+      ~tab_helper(){
+        owner.end_row();
+      }
+
+      template<class T>
+      tab_helper& operator[](T&& t){
+        owner << std::forward<T>(t);
+        return *this;
+      }
+    };
+  public:
+
+    template<class T>
+    tab_helper operator[](T&& t){
+      return tab_helper{operator<<(std::forward<T>(t))};
+    }
+
+
+    /// NOTE: This one is probably a bad idea, but I think the syntax looks pretty!
+    template<class T>
+    tabulator& operator,(T&& t){
+      return operator<<(std::forward<T>(t));
+    }
+
+
+
   };
 
 
