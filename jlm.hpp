@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <utility>
+#include <tuple>
 
 #include <glm/glm.hpp>
 
@@ -57,33 +58,138 @@ inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>
     +tab;
   }
 
-  return os << tab;
+  return os << tab('|', '-');
   
 }
-////
-//namespace jeff {
-//  template<class Os>
-//  decltype(auto) os_putter(Os&& os, const glm::vec3& v) {
-//    return std::forward<Os>(os) << v;
-//  }
-//  template<class Os>
-//  decltype(auto) os_putter(Os&& os, const glm::vec2& v) {
-//    return std::forward<Os>(os) << v;
-//  }
-//}
-//
-//namespace jos {
-//  inline constexpr bool included_jlm = true;
-//
-//  template<class... OsTypes>
-//  inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const glm::vec3& v) {
-//    return os << '(' << (v.x) << ", " << (v.y) << ", " << (v.z) << ')';
-//  }
-//  template<class... OsTypes>
-//  inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const glm::vec2& v) {
-//    return os << '(' << (v.x) << ", " << (v.y) << ')';
-//  }
-//}
+
+
+namespace jeff {
+  class homomat4 : glm::mat4x3 {
+    using mat4x3 = glm::mat4x3;
+    using col_type = typename glm::mat4x4::col_type;
+    using row_type = typename mat4x3::row_type;
+
+
+    using mat4x3::mat4x3;
+    using mat4x3::length;
+    using mat4x3::operator[];
+    using mat4x3::operator=;
+    //// NOTE: might not want to inherit arithmetic assignments
+    //using mat4x3::operator+=; 
+    //using mat4x3::operator-=;
+    //using mat4x3::operator*=; // THIS IS WHAT WE ARE CHANGING
+    //using mat4x3::operator/=;
+  };
+}
+
+inline glm::vec4 operator*(const jeff::homomat4& m, const glm::vec4& v){
+  return glm::vec4{
+    *reinterpret_cast<const glm::mat4x3*>(&m) * v,
+    v.w
+  };
+}
+
+
+//// Convert types to tuples
+namespace jeff {
+
+  namespace helper {
+
+    /** glm vectors to tuple */
+    
+    template<auto N, class T, auto Q, class IdxType, IdxType... Idxs>
+    constexpr auto as_tuple(const glm::vec<N, T, Q>& v, std::integer_sequence<IdxType, Idxs...> idxs) {
+      return std::make_tuple(v[Idxs]...);
+    }
+    template<auto N, class T, auto Q>
+    constexpr auto as_tuple(const glm::vec<N, T, Q>& v) {
+      return as_tuple(v, std::make_integer_sequence<decltype(N), N>{});
+    }
+
+
+    /** glm matrices to tuples of tuples */
+    template<auto N, auto M, class T, auto Q, class IdxType, IdxType... Idxs>
+    constexpr auto as_tuple(const glm::mat<N, M, T, Q>& m, std::integer_sequence<IdxType, Idxs...> idxs) {
+      return std::make_tuple(as_tuple(m[Idxs])...);
+    }
+
+    template<auto N, auto M, class T, auto Q>
+    constexpr auto as_tuple(const glm::mat<N, M, T, Q>& m) {
+      return as_tuple(m, std::make_integer_sequence<decltype(N), N>{});
+    }
+
+  }// end helper
+
+  template<class T>
+  constexpr auto as_tuple(T&& t) {
+    return helper::as_tuple(std::forward<T>(t));
+  }
+} // end jeff
+
+
+
+/** ALLOW STRUCTURED BINDINGS */
+
+/// This was useful
+namespace std {
+  template <auto N, class T, auto Q> 
+  struct tuple_size<glm::vec<N,T,Q>> : std::integral_constant<std::size_t, N> { };
+
+  template <std::size_t Idx, auto N, class T, auto Q>
+  struct tuple_element<Idx, glm::vec<N, T, Q>> { 
+    using type = typename glm::vec<N, T, Q>::value_type; 
+  };
+
+
+
+  template< std::size_t I, auto N, class T, auto Q>
+  constexpr auto& get(glm::vec<N, T, Q>& v) {
+    static_assert(I < N, "Index out of bounds in std::get of glm::vec");
+    return v[I];
+  }
+  template< std::size_t I, auto N, class T, auto Q>
+  constexpr const auto& get(const glm::vec<N, T, Q>& v) {
+    static_assert(I < N, "Index out of bounds in std::get of glm::vec");
+    return v[I];
+  }
+
+  template< std::size_t I, auto N, class T, auto Q>
+  constexpr auto&& get(glm::vec<N, T, Q>&& v) {
+    static_assert(I < N, "Index out of bounds in std::get of glm::vec");
+    return std::move(v[I]);
+  }
+
+
+
+  template <auto N, auto M, class T, auto Q>
+  struct tuple_size<glm::mat<N, M, T, Q>> : std::integral_constant<std::size_t, N> { };
+   
+  template <std::size_t Idx, auto N, auto M, class T, auto Q>
+  struct tuple_element<Idx, glm::mat<N, M, T, Q>> {
+    using type = typename glm::mat<N, M, T, Q>::col_type;
+  };
+
+
+
+  template< std::size_t I, auto N, auto M, class T, auto Q>
+  constexpr auto& get(glm::mat<N, M, T, Q>& v) {
+    static_assert(I < N, "Index out of bounds in std::get of glm::mat");
+    return v[I];
+  }
+  template< std::size_t I, auto N, auto M, class T, auto Q>
+  constexpr const auto& get(const glm::mat<N, M, T, Q>& v) {
+    static_assert(I < N, "Index out of bounds in std::get of glm::mat");
+    return v[I];
+  }
+
+  template< std::size_t I, auto N, auto M, class T, auto Q>
+  constexpr auto&& get(glm::mat<N, M, T, Q>&& v) {
+    static_assert(I < N, "Index out of bounds in std::get of glm::mat");
+    return std::move(v[I]);
+  }
+
+}
+
 
 
 
