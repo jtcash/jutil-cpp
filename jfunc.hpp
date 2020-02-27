@@ -35,6 +35,33 @@
 
 
 
+namespace jeff{
+  template<class T, class... Rest>
+  constexpr decltype(auto) sum(T&& t, Rest&&... rest) {
+    return (std::forward<T>(t) + ... + std::forward<Rest>(rest)); 
+  }
+
+  template<class... Types, template<typename...> class Tuple>
+  constexpr decltype(auto) sum(Tuple<Types...>&& tup){
+    //constexpr auto sumLamb = [](auto&&... args) {
+    //  return sum(std::forward<decltype(args)>(args)...);
+    //};
+    //return std::apply(sumLamb, std::forward<Tuple<Types...>>(tup));
+
+    return std::apply(
+      [](auto&&... args) {
+        return sum(std::forward<decltype(args)>(args)...);
+      },
+      std::forward<Tuple<Types...>>(tup) );
+    //return std::apply(sum, std::forward<Tuple<Types...>>(tup));
+  }
+  // constexpr decltype(auto) sum(const std::tuple<Types...>& tup){
+  //   return std::apply(sum, tup);
+  // }
+}// end jeff
+
+
+
 // some optional manipulation
 namespace jeff{
 
