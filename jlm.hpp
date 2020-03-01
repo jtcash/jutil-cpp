@@ -12,7 +12,8 @@
 #include "jtype.hpp"
 #include "jout.hpp" // for tabulator
 #include "jfunc.hpp" // for sum 
-
+#include <cassert>
+#include "Files/FileTokenizer.hpp"
 
 
 //// Convert types to tuples
@@ -43,12 +44,59 @@ namespace jeff {
       return as_tuple(m, std::make_integer_sequence<decltype(N), N>{});
     }
 
+
+
+
+    
   }// end helper
 
   template<class T>
   constexpr auto as_tuple(T&& t) {
     return helper::as_tuple(std::forward<T>(t));
   }
+
+
+
+
+
+
+
+  template<auto Q, class T>
+  constexpr glm::vec<1, T, Q> as_vec(const std::tuple<T>& tup) {
+    return {std::get<0>(tup)};
+  }
+  template<auto Q, class T>
+  constexpr glm::vec<2, T, Q> as_vec(const std::tuple<T, T>& tup) {
+    return {std::get<0>(tup), std::get<1>(tup)};
+  }
+  template<auto Q, class T>
+  constexpr glm::vec<3, T, Q> as_vec(const std::tuple<T, T, T>& tup) {
+    return {std::get<0>(tup), std::get<1>(tup), std::get<2>(tup)};
+  }
+  template<auto Q, class T>
+  constexpr glm::vec<4, T, Q> as_vec(const std::tuple<T, T, T, T>& tup) {
+    return {std::get<0>(tup), std::get<1>(tup), std::get<2>(tup), std::get<3>(tup)};
+  }
+
+
+
+  namespace helper {
+    template<auto N, class T, auto Q>
+    constexpr auto get_Q(glm::vec<N, T, Q>) {
+      return Q;
+    }
+  }// end helper
+
+  template<class T, class... Types>
+  constexpr decltype(auto) as_vec(std::tuple<T, Types...> tup) {
+    return as_vec<helper::get_Q(glm::vec3{}), jeff::remove_cvref_t<T>>(tup);
+    //std::tuple_size_v<T, Types...>,
+  }
+  template<class T, class... Types>
+  constexpr decltype(auto) as_vec(Types... types) {
+    return as_vec(std::make_tuple(types...));
+  }
+
 } // end jeff
 
 
@@ -275,7 +323,101 @@ constexpr jeff::homomat4 operator*(const jeff::homomat4& A, const jeff::homomat4
 
 
 
+namespace jeff {
 
+  template<class T>
+  struct dof_t {
+    using value_type = T;
+    using minmax_type = std::tuple<value_type, value_type>;
+
+  private:
+    value_type _value;
+    value_type _min;
+    value_type _max;
+
+    inline static constexpr value_type default_min = std::numeric_limits<value_type>::min();
+    inline static constexpr value_type default_max = std::numeric_limits<value_type>::max();
+    static_assert(default_min < default_max);
+  public:
+
+    constexpr dof_t(value_type _value, value_type _min, value_type _max) noexcept :
+      _value{_value},
+      _min{_min},
+      _max{_max} {  }
+
+
+    constexpr dof_t() noexcept : dof_t{value_type{}, default_min, default_max} {  }
+    constexpr dof_t(value_type _value) noexcept : dof_t{_value, default_min, default_max} {  }
+    constexpr dof_t(value_type _min, value_type _max) noexcept : dof_t{value_type{}, _min, _max} {  }
+
+    template<auto Q>
+    constexpr dof_t(const glm::vec<2, value_type, Q>& v) : dof_t(v.x, v.y) {  }
+    
+
+
+    constexpr dof_t(const dof_t&) noexcept = default;
+    constexpr dof_t(dof_t&&) noexcept = default;
+
+    constexpr dof_t& operator=(const dof_t&) noexcept = default;
+    constexpr dof_t& operator=(dof_t&&) noexcept = default;
+
+
+    constexpr dof_t& operator=(std::tuple<value_type, value_type> mm) noexcept {
+      _min = std::get<0>(mm);
+      _max = std::get<1>(mm);
+      //assert(_min < _max);
+      //if (!(_min < _max))        throw "shit";
+      return *this;
+    }
+
+
+
+    constexpr operator value_type() const noexcept { return _value; }
+    constexpr operator value_type&() noexcept { return _value; }
+
+    constexpr dof_t& operator=(value_type x) noexcept {
+      _value = std::clamp(x, _min, _max);
+      return *this;
+    }
+
+    constexpr value_type value() const noexcept { return _value; }
+    constexpr value_type& value() noexcept { return _value; }
+
+    constexpr value_type min() const noexcept { return _min; }
+    constexpr value_type max() const noexcept { return _max; }
+    constexpr value_type& min() noexcept { return _min; }
+    constexpr value_type& max() noexcept { return _max; }
+
+
+    constexpr decltype(auto) minmax() const noexcept { return std::make_tuple(_min, _max); }
+    constexpr decltype(auto) minmax() noexcept { return std::forward_as_tuple(_min, _max); }
+
+
+    constexpr void min(value_type new_min) noexcept { _min = new_min; }
+    constexpr void max(value_type new_max) noexcept { _max = new_max; }
+    constexpr void minmax(value_type new_min, value_type new_max) noexcept {
+      min(new_min);
+      max(new_max);
+    }
+
+
+
+    friend std::ostream& operator<<(std::ostream& os, const dof_t& d) {
+      return os << d.value << ":[" << d.min() << ',' << d.max() << ']';
+    }
+  };
+
+  using dof = dof_t<typename glm::vec3::value_type>;
+
+
+  template<class Toki, class T>
+  inline constexpr void parse_dof(Toki& toki, dof_t<T>& dest) {
+    auto parsed = toki.getTokensAs<T, T>();
+    if (!parsed)
+      throw std::runtime_error("Failed to parse dof ");
+    dest = *parsed;
+  }
+}
 
 
 
@@ -326,6 +468,13 @@ namespace jeff {
       return parse_vec4(toki, dest);
     else
       throw "TODO: Implement other types";
+  }
+
+  template<class Dest, class Toki>
+  inline constexpr Dest parse_vec(Toki& toki) {
+    Dest dest;
+    parse_vec(toki, dest);
+    return dest;
   }
 
 }// end jeff
