@@ -36,28 +36,21 @@
 
 
 namespace jeff{
+  /// Sum all arguments
   template<class T, class... Rest>
   constexpr decltype(auto) sum(T&& t, Rest&&... rest) {
     return (std::forward<T>(t) + ... + std::forward<Rest>(rest)); 
   }
 
+  /// Sum all elements of a tuple
   template<class... Types, template<typename...> class Tuple>
   constexpr decltype(auto) sum(Tuple<Types...>&& tup){
-    //constexpr auto sumLamb = [](auto&&... args) {
-    //  return sum(std::forward<decltype(args)>(args)...);
-    //};
-    //return std::apply(sumLamb, std::forward<Tuple<Types...>>(tup));
-
     return std::apply(
       [](auto&&... args) {
         return sum(std::forward<decltype(args)>(args)...);
       },
       std::forward<Tuple<Types...>>(tup) );
-    //return std::apply(sum, std::forward<Tuple<Types...>>(tup));
   }
-  // constexpr decltype(auto) sum(const std::tuple<Types...>& tup){
-  //   return std::apply(sum, tup);
-  // }
 }// end jeff
 
 
@@ -72,7 +65,19 @@ namespace jeff{
     return std::nullopt;
 
   }
+  template<class... Types>
+  [[nodiscard]] constexpr std::optional<std::tuple<Types...>> merge_optionals(std::tuple<std::optional<Types>...> opts) {
 
+    auto f = [](auto&&... args) {
+      return merge_optionals(std::forward<decltype(args)>(args)...);
+    };
+    return std::apply(f, opts);
+
+    //if ((... && opts))
+    //  return std::make_optional(std::make_tuple((*opts)...));
+    //return std::nullopt;
+
+  }
 
 }// end jeff
 
@@ -632,3 +637,107 @@ namespace jeff{
 
 
 } // End namespace jeff
+
+
+
+
+
+namespace jeff{
+  template<class... Types>
+  struct svconv : std::optional<std::tuple<Types...>>{
+
+  };
+
+  template<class T>
+  struct svconv<T> : std::optional<T>{
+    svconv(std::string_view sv) : std::optional<T>{chars_to<T>(sv)} {  }
+
+    // std::optional<T> operator()(std::string_view sv) const{
+    //   return chars_to<T>(sv);
+    // }
+    // svconv<T
+  };
+
+  // template<class T, class... Types>
+  // struct optional_cat_t : std::optional<std::tuple<T, Types...>>{
+  //   using base_type = std::optional<std::tuple<T, Types...>>;
+  //   using base_type::base_type;
+  // };
+  // template<class... Types>
+  // struct optional_cat_t : std::optional<std::tuple<Types...>>{
+  //   using base_type = std::optional<std::tuple<Types...>>;
+  //   using base_type::base_type;
+
+    
+
+  // };
+  /// TODO: Documentation
+  namespace helper{
+    /// CREDIT: https://en.cppreference.com/w/cpp/utility/tuple/make_tuple
+    template <class T>
+    struct unwrap_refwrapper{ using type = T; };
+    
+    template <class T>
+    struct unwrap_refwrapper<std::reference_wrapper<T>> { using type = T&; };
+    
+    template <class T>
+    using special_decay_t = typename unwrap_refwrapper<typename std::decay<T>::type>::type;
+    
+    
+    template<class... Types>
+    struct tuple_catter_t{
+      std::tuple<Types...> tup;
+
+      template<class U>
+      friend constexpr auto operator+(tuple_catter_t tct, U&& u){
+        using T = std::tuple_element_t<0, decltype(std::make_tuple(std::forward<U>(u)))>;
+        return tuple_catter_t<Types..., T>{std::tuple_cat(tct.tup, std::make_tuple(std::forward<U>(u)))};
+      }
+
+      template<class... Uypes>
+      friend constexpr auto operator+(tuple_catter_t tct, std::tuple<Uypes...> tup){
+        return tuple_catter_t<Types..., Uypes...>{std::tuple_cat(tct.tup, tup)};
+      }
+
+      /// Overload for all types of tuple_catter_t to take precedence over universal rvalue ref
+      template<class... Uypes>
+      friend constexpr auto operator+(tuple_catter_t tct, const tuple_catter_t<Uypes...>& rhs){
+        return tct + rhs.tup;
+      }
+      template<class... Uypes>
+      friend constexpr auto operator+(tuple_catter_t tct, tuple_catter_t<Uypes...>& rhs){
+        return tct + rhs.tup;
+      }
+      template<class... Uypes>
+      friend constexpr auto operator+(tuple_catter_t tct, tuple_catter_t<Uypes...>&& rhs){
+        return tct + std::move(rhs.tup);
+      }
+
+      friend std::ostream& operator<<(std::ostream& os, const tuple_catter_t& tct){
+        return os << tct.tup;
+      }
+
+      // constexpr operator std::tuple<Types...>(){
+      //   return tup;
+      // }
+      constexpr operator std::tuple<Types...>&&() &&{ return std::move(tup); }
+      constexpr operator const std::tuple<Types...>&() const &{ return tup; }
+      constexpr operator std::tuple<Types...>&() &{ return tup; }
+
+      constexpr decltype(auto) operator()() &&{ return std::move(tup); }
+      constexpr decltype(auto) operator()() &{ return tup; }
+      constexpr decltype(auto) operator()() const &{ return tup; }
+    };
+  } // end helper
+  template<class... Types>
+  auto tuple_catter(Types&&... types){
+    return helper::tuple_catter_t<helper::special_decay_t<Types>...>{std::make_tuple(std::forward<Types>(types)...)};
+  }
+  template<class... Types>
+  helper::tuple_catter_t<Types...> tuple_catter(std::tuple<Types...> tup){
+    return {tup};
+  }
+
+
+}// end jeff
+
