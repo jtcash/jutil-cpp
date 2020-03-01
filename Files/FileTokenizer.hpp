@@ -75,9 +75,38 @@ namespace jeff{
       return jeff::chars_to<AsType, true>(tok);
     }
 
-    template<class... AsTypes>
+    // template<class... Ts>
+    // struct gta_helper : std::tuple<std::optional<Ts>...> {
+    //   //std::tuple<Ts...> tup;
+
+    //   template<class T>
+    //   gta_helper<Ts..., T> operator<<(std::optional<T> t) {
+    //     return gta_helper<Ts..., T>{std::tuple_cat(tup, std::make_tuple(t))};
+    //   }
+
+    //   //operator std::tuple<Ts...>&&() && {
+    //   //  return std::move(tup);
+    //   //}  
+    // };
+    /*template<class First, class... Rest, class... Gotten>
+    [[nodiscard]] auto getTokensAs(Gotten&&... gotten) {
+      
+    }*/
+
+  private:
+    template<class... Gotten>
+    [[nodiscard]] auto getter(Gotten&&... gotten) {
+      return std::make_tuple(std::forward<Gotten>(gotten)...);
+    }
+    template<class First, class... AsTypes, class... Gotten>
+    [[nodiscard]] auto getter(Gotten&&... gotten) {
+      return getter<AsTypes...>(std::forward<Gotten>(gotten)..., getTokenAs<First>());
+    }
+  public:
+
+    template<class First, class... AsTypes>
     [[nodiscard]] auto getTokensAs(){
-      return jeff::merge_optionals(getTokenAs<AsTypes>()...);
+      return jeff::merge_optionals(getter<First, AsTypes...>());
     }
 
     std::string_view operator()() { return getToken(); }
@@ -129,8 +158,6 @@ namespace jeff{
     
     [[nodiscard]]
     std::string_view getToken() override{ return getToken(delimiter_sv); }
-
-
 
 
 
