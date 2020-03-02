@@ -140,8 +140,65 @@ namespace jeff{
 }// end jeff
 
 
-
+/** TODO: Document
+ * Index:
+ *  remove_cvref_t
+ *  or_type_t
+ *  and_type_t
+ *  is_same_nocvref_v
+ *  is_same_any_v / is_one_of_v
+ *  is_same_nocvref_any_v / is_one_of_nocvref_v
+ *  is_array_v
+ *  
+ * 
+ * TODO: Consider moving to to nocvr instead of nocvref
+ * 
+ * 
+ * TODO: Consider changing most class keywords to typename to satisfy common practice 
+ * /// Discussion here led me to this decision: https://stackoverflow.com/q/213121/6232717
+ * 
+ * NOTE: I might be playing around here with tricks to prevent too large an increase in
+ * compilation time. For an example, look at MSVC's std::is_same/is_same_v implementation
+ * in comparison to gcc's. MSVC seems to like having the is_same_v not rely on a template type
+ * at all. Perhaps this is actually the better way to go, as it involves less evaluation and 
+ * type expansions? Regardless, this whole idea is moot unless this header were to actually cause
+ * a noticeable increase in compilation time
+ * */
 namespace jeff{
+
+  /// NOTE: Use local true_type and false_type here to clean up implementations
+  using true_type = std::true_type;
+  using false_type = std::false_type;
+
+  // NOTE: Should i use std::is_same, or roll my own?
+  /// CREDIT: https://en.cppreference.com/w/cpp/types/is_same
+  /*
+    template<class T, class U>
+    struct is_same : std::false_type{};
+    template<class T>
+    struct is_same<T,T> : std::true_type{};
+    template<class T, class U>
+    inline constexpr bool is_same_v = is_same<T,U>::value;
+  */ /// But i want to try rolling my own a different way
+  template<typename T, typename U> 
+  struct is_same : false_type{};
+
+  template<typename T>
+  struct is_same<T,T> : true_type{};
+
+  template<typename, typename>
+  inline constexpr bool is_same_v = false;
+  
+  template<typename T>
+  inline constexpr bool is_same_v<T,T> = true;
+  /// NOTE: Both the template struct and inline var implementations should
+  /// not be defined for even slightly complicated things
+
+
+
+
+
+
   /*** remove_cvref ***/
   template<class...>
   struct remove_cvref{};
@@ -158,27 +215,71 @@ namespace jeff{
 
   /*** or_type ***/
   // If CondType is true_type, evaluated to true_type, else evaluates to ElseType
-  template<class CondType, class ElseType> 
-  struct or_type : 
-    std::conditional< CondType::value, std::true_type, ElseType >::type{};
 
-  template<class CondType, class ElseType>
-  using or_type_t = typename or_type<CondType, ElseType>::type;
+  /// NOTE: Changed or_type syntax!
+  //  template<class CondType, class ElseType> 
+  // struct or_type : 
+  //   std::conditional< CondType::value, std::true_type, ElseType >::type{};
+  // template<class CondType, class ElseType>
+  // using or_type_t = typename or_type<CondType, ElseType>::type;
+
+
+  // namespace helper{
+  //   template<>
+  //   struct or_type
+  // }// end helper
+  // template<class CondType, class ElseType> 
+  // struct or_type : 
+  //   std::conditional<CondType, std::true_type, ElseType >::type{};
+
+  template<bool Cond, class ElseType> 
+    struct or_type : std::conditional<Cond, true_type, ElseType >::type{};
+
+  // template<Cond, class ElseType> 
+
+  // struct or_type : or_type<std::bool_constant<Cond>, ElseType>{};
+    // std::conditional<Cond, std::true_type, ElseType >::type{};
+
+  // template<class CondType, class ElseType>
+  // struct or_type<CondType::value, ElseType> : or_type<CondType::value, ElseType>{};
+
+  template<bool Cond, class ElseType>
+  using or_type_t = typename or_type<Cond, ElseType>::type;
+
+  
+
 
   /*** and_type ***/
-  template<class CondType, class ThenType> 
-  struct and_type : 
-    std::conditional< CondType::value, ThenType, std::false_type >::type{};
 
-  template<class CondType, class ThenType>
-  using and_type_t = typename and_type<CondType, ThenType>::type;
+  /// NOTE: Changed and_type syntax!
+  // template<class CondType, class ThenType> 
+  // struct and_type : 
+  //   std::conditional< CondType::value, ThenType, std::false_type >::type{};
+  // template<class CondType, class ThenType>
+  // using and_type_t = typename and_type<CondType, ThenType>::type;
+  
+  template<bool Cond, class ThenType> 
+  struct and_type : 
+    std::conditional< Cond, ThenType, false_type >::type{};
+
+  template<bool Cond, class ThenType>
+  using and_type_t = typename and_type<Cond, ThenType>::type;
+
+  
+
+
+
+  
+
+
 
 
 
   /*** is_same_nocvref ***/
   template<class T, class U>
   struct is_same_nocvref : 
-    std::is_same< remove_cvref_t<T>, remove_cvref_t<U> >{};
+    is_same< remove_cvref_t<T>, remove_cvref_t<U> >{};
+    // std::is_same< remove_cvref_t<T>, remove_cvref_t<U> >{};
 
   template<class T, class U>
   inline constexpr bool is_same_nocvref_v = is_same_nocvref<T,U>::value;
@@ -199,7 +300,8 @@ namespace jeff{
 
   template<class T, class U, class... Rest>
   struct is_same_any<T,U, Rest...> :
-    or_type< std::is_same<T,U>, is_same_any<T, Rest...> >{};
+    or_type< std::is_same_v<T,U>, is_same_any<T, Rest...> >{};
+    // // or_type< std::is_same<T,U>, is_same_any<T, Rest...> >{};
 
   template<class T, class... Types>
   inline constexpr bool is_same_any_v = is_same_any<T, Types...>::value;
@@ -214,19 +316,19 @@ namespace jeff{
 
 
   /*** is_same_nocvref_any  ***/
-  template<class...> struct is_same_nocvref_any;
+  template<class...> struct is_same_nocvref_any; 
 
   template<class T>
-  struct is_same_nocvref_any<T> : 
-    std::true_type {};
+  struct is_same_nocvref_any<T> : true_type {};
 
   template<class T, class U>
-  struct is_same_nocvref_any<T,U> : 
-    is_same_nocvref<T,U> {};
+  struct is_same_nocvref_any<T,U> : is_same_nocvref<T,U> {};
+
 
   template<class T, class U, class... Rest>
   struct is_same_nocvref_any<T,U, Rest...> : 
-    or_type< is_same_nocvref<T,U>, is_same_nocvref_any<T,Rest...> >{};
+    or_type< is_same_nocvref<T,U>::value, is_same_nocvref_any<T,Rest...> >{};
+    // or_type< is_same_nocvref<T,U>, is_same_nocvref_any<T,Rest...> >{};
 
   template<class T, class... Types>
   inline constexpr bool is_same_nocvref_any_v = is_same_nocvref_any<T, Types...>::value;
@@ -260,5 +362,37 @@ namespace jeff{
   using common_type_nocvref_t = std::common_type_t<jeff::remove_cvref_t<Types>...>;
 
 
+
+  /// TODO: Document
+  /// Checks for stringy types
+
+  /// NOTE: Only checks for string literals with char type
+  template<class T>
+  struct is_string_literal : false_type{};
+
+  template<std::size_t N> 
+  struct is_string_literal<const char [N]> : true_type{};
+  
+  template<std::size_t N> 
+  struct is_string_literal<const char (&)[N]> : true_type{};
+
+  template<class T>
+  inline constexpr bool is_string_literal_v = is_string_literal<T>::value;
+
+
+
+
+  // template<class T>
+  // struct is_stringy : std::conditional_t<is_string_literal_v<>>
+
+
+  // template<class T>
+  // struct is_stringy : std::false_type{};
+
+
+  
+
+  // template<class T>
+  // struct is_stringy<std::> : 
 
 }
