@@ -344,4 +344,7 @@ namespace jeff{
   // }
 
 
+  using keyword = jkeyword;
+  using keyword_rt = jkeyword_rt;
+
 } // end namespace jeff
