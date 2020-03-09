@@ -21,6 +21,14 @@
 #include "jout.hpp"
 
 
+/// NOTE:! gcc seems to be very innefficient with std::strings with -O2
+/// as it does not have -finline-functions enabled for some reason, despite the
+/// documentation specifically stating that -finline-functions is enabled by default
+/// with -O2. This is very bad for simple string stuff
+/// see: https://godbolt.org/z/wd52Zm
+/// ALWAYS: use -finline-functions or -O3 when not debugging
+
+
 /* Recommended compiler flags for GCC
 https://kristerw.blogspot.com/2017/09/useful-gcc-warning-options-not-enabled.html
 https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
