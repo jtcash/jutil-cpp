@@ -24,8 +24,8 @@
   || defined (JEFF_STRINGY)
 #   error "jinfo requires all macros in JEFF_{STRINGIZE,STRINGIFY,STRINGY} to be undefined"
 #endif
-#define JEFF_STRINGIFY(...) JEFF_STRINGIZE(__VA_ARGS__)
-#define JEFF_STRINGIZE(...) #__VA_ARGS__
+#define JEFF_STRINGIFY(...) JEFF_STRINGIZE(__VA_ARGS__)   /** NOTE: Does the oder of this line and **/
+#define JEFF_STRINGIZE(...) #__VA_ARGS__                  /** this line matter? GCC documentation had it this way **/
 #define JEFF_STRINGY(...) "STRINGY { " #__VA_ARGS__ " }  =  { " JEFF_STRINGIZE(__VA_ARGS__) " }"
 
 
