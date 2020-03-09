@@ -332,6 +332,19 @@ inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>
 }
 
 
+
+//// TODO: WHY DIDN'T I OVERLOAD FOR ALL STD::ARRAYS? /// OH! NEVERMIND 
+template<class... OsTypes, std::size_t N>
+inline std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const std::array<char, N>& arr){
+  os << "{ ";
+  std::size_t ctr{};
+  for(auto&& e : arr)
+    (++ctr>1 ? os<<", " : os) <<  ("'" + jeff::escape(e) + "'");
+    // os <<  ("'" + jeff::escape(e) + "'");
+
+  return os << '}';
+}
+
 template<class... OsTypes>
 static std::basic_ostream<OsTypes...>& operator<<(std::basic_ostream<OsTypes...>& os, const unsigned char* bp){
   return os << (const void*)(bp);
