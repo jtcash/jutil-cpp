@@ -45,7 +45,7 @@ namespace jeff{
 
 
 // Make sure the definitions are available
-#if defined(jecho) || defined(jechot) || defined(jlecho) || defined(jlechot)
+#if defined (jecho) || defined (jechot) || defined (jlecho) || defined (jlechot)
 #pragma message("jout.hpp defines `jecho`, `jechot`, `jlecho` and `jlechot`; at least one is already defined" \
 "and will not be redefined in here")
 #endif
@@ -59,6 +59,28 @@ namespace jeff{
 #define jechot(...)  (jeff::os_putter(std::cout << #__VA_ARGS__ << " = ", __VA_ARGS__) << "; \t")
 // #define jechot(...) (  JECHO_HELPER(std::cout, #__VA_ARGS__, (__VA_ARGS__)) << "; \t"  )
 #endif
+
+
+
+
+/// TODO: Finish  tabulator echor
+
+// #ifdef jecho_tbl
+// #   pragma message("jecho_tbl already defined, wtf?")
+// #else
+// /// NOTE: each arg to jecho_tbl should be entered as a row in a table
+// namespace jeff{
+//   namespace helper{
+//     /// NOTE: I cannot immediately think of how to grab the labels when commas might not separate labels
+//     template<class... Args>
+//     inline jecho_build_table()
+//   }// end helper
+// }// end jeff
+
+
+// #   define jecho_tbl(...) 
+// #endif
+
 
 
 
