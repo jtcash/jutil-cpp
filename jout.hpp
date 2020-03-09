@@ -99,6 +99,7 @@ namespace jeff{
  *  pr: pad right TODO: details
  *
  *  g: Group into something like "(a,b,c)""
+ *  e: escaped TODO: impl and details
  *
  * */
 namespace jfmt{
@@ -109,7 +110,7 @@ namespace jfmt{
   template<class T>
   constexpr decltype(auto) x(T t) noexcept{ // by value, as this should only take scalars and is temporary anyway
     return carry_lambda([t](auto& os) -> decltype(os){
-      return os << reinterpret_cast<void*>(t);
+      return os << reinterpret_cast<const void*>(t);
     });
   }
 
@@ -216,6 +217,22 @@ namespace jfmt{
     });
   }
 
+
+
+/// /NEW
+
+  constexpr decltype(auto) eq(char c) noexcept{
+    return carry_lambda([c](auto& os) -> decltype(os){
+      return os << jeff::escaped_quoted(c);
+      // return os << ( '\'' + jeff::escape(c) + '\'' );
+    });
+  }
+
+  constexpr decltype(auto) eq(std::string_view sv) noexcept{
+    return carry_lambda([sv](auto& os) -> decltype(os){
+      return os << jeff::escaped_quoted(sv);
+    });
+  }
 
 
   namespace helper{
@@ -405,6 +422,11 @@ namespace jeff{
    *  TODO: Genericize for putting into any stream type
    * */
   class tabulator{
+      /// TODO: Make this configurable or something?
+    inline static constexpr bool empty_row_is_divider = true;
+
+
+
   public:
     using row_type = std::vector<std::string>;
 
@@ -444,11 +466,14 @@ namespace jeff{
       return escape_and_push_field(str);
     }
     tabulator& operator<<(char c){
-      return push_field(jeff::escape(c));
+      // return push_field(jeff::escape(c));
+      return push_field('\'' + jeff::escape(c) + '\'');
     }
 
 
-
+    decltype(auto) size() const noexcept{
+      return rows.size();
+    }
 
 
     template<class T>
@@ -512,6 +537,32 @@ namespace jeff{
     }
 
 
+
+/// TEMP: Start addition made on laptop
+
+  private:
+  /// TODO: think about this idea and decide whether or not to keep it
+    tabulator& handleCharSpecial(char c){
+      switch(c){
+      case '\n':  return end_row();
+      default:    return operator<<(c);
+      }
+    }
+  public:
+      /// GOAL: Have a special put operator that handles special values differently
+    tabulator& operator<<=(char c){
+      /// TODO: This is probably a bad idea, so evaluate it
+      return  handleCharSpecial(c); 
+    }
+    
+    
+/// TEMP: End addition made on laptop
+
+
+    tabulator& operator,(char c){ // tabulator& operator,(T&& t){
+      return handleCharSpecial(c);
+    }
+
     /// NOTE: This one is probably a bad idea, but I think the syntax looks pretty!
     //    e.g.  t << a, b, c, d;
     template<class T>
@@ -545,7 +596,8 @@ namespace jeff{
 
 
 
-
+    /// TODO: Make it so that rows with missing fields still have a vsep
+    /// right after the last printed field
     std::ostream& print(std::ostream& os, const std::string& sep, char vborder, char hborder) const{
       if(widths.empty())
         return os << "{[empty tabulator]}";
@@ -571,9 +623,20 @@ namespace jeff{
       for(std::size_t r=0; r<rows.size(); ++r){
         const auto& row = rows[r];
         
+        const bool is_last_row = (r + 1 == rows.size());
+
+        /// TODO: Integrate this chunk better
+        if constexpr(empty_row_is_divider){
+          if(row.empty() && !is_last_row){
+            os << '\n' << vborder << std::string_view(hline).substr(2) << vborder;
+            continue;
+          }
+        }
+        /// Chunk ending here
         std::size_t row_width = 0;
 
-        if(!(row.empty() && r + 1 == rows.size())){ // skip last row if empty
+        if(!(row.empty() && is_last_row)){ // skip last row if empty
+        // if(!(row.empty() && r + 1 == rows.size())){ // skip last row if empty
           os << '\n' << vstart;
           for(std::size_t i=0; i<row.size(); ++i){
             const auto& field = row[i];
@@ -582,6 +645,7 @@ namespace jeff{
               os << sep;
               row_width += sep.size();
             }
+            /// TODO: Store space string to avoid this repeated allocation
             os << field << std::string(widths[i] - field.size(), ' ');
 
             row_width += widths[i];

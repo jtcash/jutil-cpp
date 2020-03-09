@@ -179,6 +179,24 @@ namespace jeff{
     return str;
   }
 
+  /// TODO: Fix escaped/escape naming confusion
+  inline std::string escaped_quoted(char c){
+    if(is_print(c))
+      return {'\'', c, '\''};
+    return '\'' + helper::escape_nonprintable(c) + '\'';
+  }
+  inline std::string escaped_quoted(std::string_view sv){
+    std::string toret{'"'};
+    toret.reserve(sv.size()+2);
+    
+    for(auto c : sv){
+      if(is_print(c))
+        toret += c;
+      else
+        toret += helper::escape_nonprintable(c);
+    }
+    return toret += '"';
+  }
   
 
 

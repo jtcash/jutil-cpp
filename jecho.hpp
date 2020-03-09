@@ -52,6 +52,8 @@ namespace jeff{
 
 #ifndef jecho
 #define jecho(...)  (jeff::os_putter(std::cout << #__VA_ARGS__ << " = ", __VA_ARGS__) << std::endl)
+#define jeecho(...)  (jeff::os_putter(std::cerr << #__VA_ARGS__ << " = ", __VA_ARGS__) << std::endl)
+#define jechos(os, ...)  (jeff::os_putter((os) << #__VA_ARGS__ << " = ", __VA_ARGS__) << std::endl)
 // #define jecho(...)  (  JECHO_HELPER(std::cout, #__VA_ARGS__, (__VA_ARGS__)) << std::endl  )
 #endif
 
