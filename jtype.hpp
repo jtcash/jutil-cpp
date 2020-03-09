@@ -96,6 +96,40 @@ namespace jeff{
   // NOTE: This is only for pretty printing
   // TODO: Bad performance fix
   namespace helper{
+    
+
+    /// TODO: Moveme
+    // template<char C>
+    // constexpr std::string_view as_excape_hex(){
+      
+    // }
+
+
+
+    inline std::string escape_nonprintable(char c){
+    // inline std::string_view escape_nonprintable(char c){
+    // constexpr std::string_view escape_nonprintable(char c){
+      switch(c){
+      case '\0': return "\\0";
+      case '\t': return "\\t";
+      case '\n': return "\\n";
+      case '\v': return "\\v";
+      case '\f': return "\\f";
+      case '\r': return "\\r";
+      case '\b': return "\\b";
+      case '\a': return "\\a";
+      default:
+        // Return a hex representation of the string
+        std::string str(2, '\0');
+        auto [p, ec] = std::to_chars(str.data(), str.data()+str.size(), static_cast<unsigned char>(c), 16);
+        if(ec != std::errc())// this should never happen
+          return "{??}";
+        return "\\x" + str;
+      }
+    }
+  }// end helper
+
+  /*  old version
     inline std::string escape_nonprintable(char c){
       switch(c){
       case '\0': return "\\0";
@@ -114,12 +148,23 @@ namespace jeff{
         return "\\x" + str;
       }
     }
-  }// end helper
+  */
+  // inline std::string escape(char c){
+  //   if(is_print(c))
+  //     return std::string(1,c);
+  //   return helper::escape_nonprintable(c);
+  // }
   inline std::string escape(char c){
     if(is_print(c))
       return std::string(1,c);
-    return helper::escape_nonprintable(c);
+    return std::string(helper::escape_nonprintable(c));
   }
+
+  // inline std::string escape_s(char c){
+  //   if(is_print(c))
+  //     return std::string(1,c);
+  //   return helper::escape_nonprintable(c);
+  // }
 
   inline std::string escaped(std::string_view sv){
     std::string str;
@@ -164,11 +209,33 @@ namespace jeff{
  * type expansions? Regardless, this whole idea is moot unless this header were to actually cause
  * a noticeable increase in compilation time
  * */
+
+
+
+
+
+//
 namespace jeff{
+
+
+
+  
+
 
   /// NOTE: Use local true_type and false_type here to clean up implementations
   using true_type = std::true_type;
   using false_type = std::false_type;
+
+  template<bool Val>
+  using bool_constant = std::bool_constant<Val>;
+
+
+  /// CREDIT: https://en.cppreference.com/w/cpp/language/if#Constexpr_If
+  template<typename T>
+  struct dependent_false : false_type{};
+
+
+
 
   // NOTE: Should i use std::is_same, or roll my own?
   /// CREDIT: https://en.cppreference.com/w/cpp/types/is_same
@@ -381,6 +448,221 @@ namespace jeff{
   inline constexpr bool is_string_literal_v = is_string_literal<T>::value;
 
 
+  // template<typename...> struct has_property;
+  // template<bool Val> struct has_property : std::bool_constant<Val>{};
+  
+  
+  // template<bool B, class T, class F>
+  // struct conditional { typedef T type; };
+ 
+  // template<class T, class F>
+  // struct conditional<false, T, F> { typedef F type; };
+  
+  // template< bool B, class T, class F >
+  // using conditional_t = typename conditional<B,T,F>::type;
+
+
+  // template<bool B, typename F>
+  // struct jor_type : F{};
+
+  // template<typename F>
+  // struct jor_type<true, F> : true_type{};
+
+
+
+
+  template<bool B, typename F, typename... Rest>
+  struct jor_type2;
+
+  
+  template<typename F, typename... Rest>
+  struct jor_type2<true, F, Rest...> : true_type{}; 
+
+  template<typename F, typename... Rest>
+  struct jor_type2<false, F, Rest...> : jor_type2<F::value, Rest...>{};
+  
+
+//  // template<bool B, typename... Rest>
+//   // struct foldl_or;
+
+//   // template<typename F, typename... Rest>
+//   // struct foldl_or<true, F, Rest...> : true_type{}; 
+
+//   template<bool B, typename... Rest>
+//   struct foldl_or : std::bool_constant<B>{};
+
+//   // template<typename F, typename... Rest>
+//   // struct foldl_or<true, F, Rest...> : true_type{}; 
+
+//   template<>
+//   struct foldl_or<false> : false_type{};
+
+//   template<typename F, typename... Rest>
+//   struct foldl_or<false, F, Rest...> : foldl_or<F::value, Rest...>{};
+  // template<bool B, typename... Rest>
+  // struct foldl_or;
+
+  // template<typename F, typename... Rest>
+  // struct foldl_or<true, F, Rest...> : true_type{}; 
+
+
+
+
+  /// Evaluates to false_type or true_type
+  // template<class ValueType, typename... Rest>
+  // struct foldl_or : ValueType{};
+
+  // template<bool Value, typename... Rest>
+  // struct foldl_or<bool_constant<Value>, Rest...> : BoolConstant<Value>{};
+
+
+  template<bool B, typename... Rest>
+  struct foldl_or : std::bool_constant<B>{};
+
+
+  /// NOTE: I think this is a pretty neat trick I discovered, though I bet it is actually very
+  /// common and probably even has its own name (I guess I probably Colombus-discovered it.).
+  /// The primary template's first parameter is a bool non-type, so if we explicitly specialize
+  /// for false, that means everything we don't catch here will be caught by the primary template.
+  ///
+  /// Here, we leverage this trick to make the following defer to itself until the parameter pack 
+  /// is exhausted or First::value==true. The overall expression resolves to true_type if
+  /// any type parameter has value==true, false_type otherwise.
+  //
+  template<typename First, typename... Rest>
+  struct foldl_or<false, First, Rest...> : foldl_or<First::value, Rest...>{};
+
+
+  template<bool B, typename... Rest>
+  inline constexpr bool foldl_or_v = foldl_or<B, Rest...>::value;
+
+  /// NOTE: Still want
+
+
+
+  
+  // template<bool B, typename... Rest>
+  // struct foldl_or : std::bool_constant<B>{};
+
+  // template<typename F, typename... Rest>
+  // struct foldl_or<false, F, Rest...> : foldl_or<F::value, Rest...>{};
+
+  // template<bool B, typename... Rest>
+  // inline constexpr bool foldl_or_v = foldl_or<B, Rest...>::value;
+
+
+
+
+
+  // template<auto Value, typename... Rest>
+  // struct foldl_or2 : std::bool_constant<B>{};
+
+  // template<>
+  // struct foldl_or2<false> : false_type{};
+
+  // template<typename F, typename... Rest>
+  // struct foldl_or<false, F, Rest...> : foldl_or<F::value, Rest...>{};
+
+
+
+  // namespace helper{
+  //   template<bool B, typename... Rest>
+  //   struct foldl_or ;
+
+    
+
+  // }//end helper
+
+ 
+
+
+
+
+
+
+  // // template<std::size_t Depth, bool B, typename F, typename... Rest>
+  // // struct _jor_type4;
+
+  // // template<std::size_t Depth, typename F, typename... Rest>
+  // // struct _jor_type4<Depth, true, F, Rest...> : true_type {
+  // //   static inline constexpr std::size_t depth = Depth;
+  // // };
+  // template<std::size_t Depth, bool B, typename F, typename... Rest>
+  // struct _jor_type4{
+  //   static inline constexpr std::size_t depth = Depth;
+  // };
+
+  // template<std::size_t Depth, typename F, typename... Rest>
+  // struct _jor_type4<Depth, true, F, Rest...> : true_type 
+  // // template<typename F, typename... Rest>
+  // // struct jor_type4<true, F, Rest...> : true_type{
+  // //   static inline constexpr std::size_t depth;
+  // // }; 
+
+  // template<std::size_t Depth, typename F, typename... Rest>
+  // struct _jor_type4<Depth, false, F, Rest...> : _jor_type4<Depth+1, F::value, Rest...>{};
+
+
+
+
+  // template<bool B, typename F, typename... Rest>
+  // struct jor_type4 : _jor_type4<0, B, F, Rest...> ;
+
+  // // template<typename F, typename... Rest>
+  // // struct jor_type4<B,F,Rest...> : _jor_type4<0, B, F, Rest...>{};
+  // template<typename F, typename... Rest>
+  // struct jor_type4<true, F, Rest...> : _jor_type4<0, true, F, Rest...>{};
+
+
+
+  // template<typename F, typename... Rest>
+  // struct jor_type4<false, F, Rest...> : _jor_type4<0, F::value, Rest...>{};
+
+
+  // template<bool Result>
+  // struct or_foldl : bool_constant<Result> {};
+
+
+
+
+
+
+  // template<typename...>
+  // struct or_foldl : false_type{};
+
+  // template<typename Cond>
+  // struct or_foldl<Cond> : bool_constant<Cond::value>{};
+
+  // template<typename FirstCond, typename... RestConds>
+  // struct or_foldl<FirstCond, RestConds...> : 
+  // template<class Check>
+
+
+  
+  template<typename T, template<typename> class... PropTypes>
+  struct has_property : std::false_type{};
+
+  template<typename T, template<typename> class PropType>
+  struct has_property<T,PropType> : bool_constant<PropType<T>::value>{};
+  // struct has_property<T,PropType> : PropType<T>{};
+
+  // template<typename T, template<typename> class PropType>
+  // inline constexpr bool 
+
+
+
+  template<typename T, template<typename> class FirstProp, template<typename> class... PropTypes>
+  struct has_property<T,FirstProp, PropTypes...> : 
+    std::conditional_t<has_property<T, FirstProp>::value, 
+      std::true_type, 
+      has_property<T, PropTypes...>
+    >{};
+
+  
+
+
+  // template<typename T, template<typename> class Prop>
+  // struct has_property : Prop<T>{};
 
 
   // template<class T>
