@@ -281,8 +281,7 @@ namespace jeff{
   }
 
   constexpr char nibble_to_hex(std::byte nib){
-    return    "0123456????bcdef"[std::to_integer<std::size_t>(nib & std::byte(0xf))];
-    // return "0123456789abcdef"[std::to_integer<std::size_t>(nib & std::byte(0xf))];
+    return "0123456789abcdef"[std::to_integer<std::size_t>(nib & std::byte(0xf))];
   }
   constexpr std::array<char, 3> byte_to_hex(std::byte b){
     return { nibble_to_hex(b>>4), nibble_to_hex(b), '\0'};
