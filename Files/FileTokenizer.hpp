@@ -80,12 +80,18 @@ namespace jeff{
       return jeff::merge_optionals(getTokenAs<AsTypes>()...);
     }
 
+
+
+
+
+    
+
     std::string_view operator()() { return getToken(); }
     virtual explicit operator bool() const = 0;
 
 
 
-    static inline constexpr std::string_view no_token{};
+    static inline constexpr std::string_view no_token = std::string_view();
   };
 
 
@@ -154,13 +160,25 @@ namespace jeff{
         return handleNoOpenDelimFound2() ? getToken(delimiters) : no_token;
         // return handleNoOpenDelimFound(delimiters);  // Could not find the start of a token
       
+////
+      // std::string_view skipped = buf_sv.substr(0, tbegin_loc);
+      [[maybe_unused]]auto skipped_str = jfmt::q(jeff::escaped( buf_sv.substr(0, tbegin_loc)));
+      // jecho(skipped_str);
+////
+
+
       // Find where this token ends
       auto tend_loc = buf_sv.find_first_of(delimiters, tbegin_loc+1);
       if(tend_loc == std::string_view::npos)  
         return handleNoCloseDelimFound(delimiters); // Could not find the an end to the token
       
+      [[maybe_unused]]char delim_hit = buf_sv[tend_loc];
+      // jecho(jfmt::eq(delim_hit));
+
+      
       // Extract the token and update the buffer pointer to exclude this token
       auto token = buf_sv.substr(tbegin_loc, tend_loc - tbegin_loc);
+      // buf_sv.remove_prefix(tbegin_loc + token.size()); // +1 because it removes the delim?? Test if i am right
       buf_sv.remove_prefix(tbegin_loc + token.size() + 1); // +1 because it removes the delim?? Test if i am right
 
       return token;
@@ -189,8 +207,27 @@ namespace jeff{
 
     [[nodiscard]]
     explicit operator bool() const override{
+      // jecho("WTF", bufferContains<0>(buf_sv));
+
+      // std::cerr << "WTF???!?!?!" << std::endl;
+
+      [[maybe_unused]]
+      bool isIn0 = bufferContains<0>(buf_sv);
+      // bool isIn0? = bufferContains<0>(buf_sv);
+      [[maybe_unused]]
+      bool isIn1 = bufferContains<1>(buf_sv);
+
+      // jeecho(isIn0, isIn1);
+
+      // if(!isIn1 && isIn0){
       if(!bufferContains<1>(buf_sv) && bufferContains<0>(buf_sv)){
-        std::cerr << "ERROR: Need to rethink my operator bool() method" << std::endl;
+        inform_buf_sv();
+
+        // jeecho(bufferContains<0>(buf_sv), bufferContains<1>(buf_sv));
+
+        // jeecho(!bufferContains<1>(buf_sv) && bufferContains<0>(buf_sv));
+
+        std::cerr << "ERROR: " << __LINE__ << "\tNeed to rethink my operator bool() method" << std::endl;
       }
       return  bufferContains<1>(buf_sv) || source().operator bool();
     }
@@ -311,7 +348,10 @@ namespace jeff{
     //   buf_sv = {};
     //   return {};
     // }
-    
+    void inform_buf_sv() const{
+      // std::cerr << "\tbuf_sv.data() = " << jfmt::x(buf_sv.data()) << std::endl;
+      // std::cerr << "\tbuf_sv.size() = " << buf_sv.size() << std::endl;
+    }
 
     // clear the buffer pointer and return false the buffer cannot be refilled
     [[nodiscard]]
@@ -321,8 +361,10 @@ namespace jeff{
       if(refillBuffer())
         return true;
       // This could mean that we have reached the end of the file
-      std::cerr << "refillBufferAfterCopy2() failed loc1" << std::endl;
+      std::cerr << "handleNoOpenDelimFound2() failed loc1, line " << __LINE__ << std::endl;
       buf_sv = {};
+      // std::cerr << "buf_sv.data() = " << jfmt::x(buf_sv.data()) << "\tbuf_sv.size() = " << buf_sv.size() << std::endl;
+      // inform_buf_sv();
       return false;
     }
     
